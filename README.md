@@ -24,10 +24,10 @@ Estructura basada en Clean Architecture:
 
 ```
 src/
-├── api/              # Capa de entrada: rutas Fastify, controllers, schemas HTTP
-├── application/      # Casos de uso y puertos de la aplicación
-├── domain/           # Entidades, value objects y reglas de negocio puras
-└── infrastructure/   # Detalles técnicos: TypeORM, repositorios, servicios externos
+├── api/              # Controllers y rutas Fastify, middleware, composition root
+├── application/      # Interfaces (puertos), DTOs, servicios/casos de uso, patrones
+├── domain/           # Entidades y enums — sin dependencias externas
+└── infrastructure/   # TypeORM, repositorios, JWT
     └── database/
         ├── entities/
         └── migrations/
@@ -52,10 +52,10 @@ flowchart LR
 
     subgraph layers["Clean Architecture"]
         direction TB
-        api["api<br/>rutas Fastify · controllers · schemas"]
-        infra["infrastructure<br/>TypeORM · repositorios · migraciones"]
-        app["application<br/>casos de uso · puertos"]
-        domain["domain<br/>entidades · value objects · reglas de negocio"]
+        api["api<br/>controllers/rutas · middleware · composition root"]
+        infra["infrastructure<br/>TypeORM · repositorios · JWT"]
+        app["application<br/>interfaces · DTOs · servicios"]
+        domain["domain<br/>entidades · enums — sin dependencias externas"]
 
         api -- depende de --> infra
         infra -- depende de --> app
@@ -67,6 +67,19 @@ flowchart LR
     style domain fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
     style layers fill:#fafafa,stroke:#bdbdbd
 ```
+
+### Equivalencias con la versión .NET original
+
+| Original (.NET)                     | Este proyecto (Node.js)                  |
+| ----------------------------------- | ---------------------------------------- |
+| `EmployeeManagement.Domain`         | `src/domain/`                            |
+| `EmployeeManagement.Application`    | `src/application/`                       |
+| `EmployeeManagement.Infrastructure` | `src/infrastructure/`                    |
+| `EmployeeManagement.Api`            | `src/api/`                               |
+| EF Core                             | TypeORM                                  |
+| Controllers de ASP.NET Core         | Rutas y handlers de Fastify              |
+| ASP.NET Identity + JWT              | Autenticación JWT                        |
+| xUnit + Moq (`tests/`)              | Jest + Supertest (`tests/`, planificado) |
 
 ## Estado del proyecto
 
