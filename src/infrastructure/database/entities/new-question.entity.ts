@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
-import { NewSelectionEntity } from './new-selection.entity'
+import { NewSelectionEntity } from './new-selection.entity.js'
 
 @Entity('new_questions')
 export class NewQuestionEntity {

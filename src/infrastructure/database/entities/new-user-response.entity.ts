@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
-import { NewQuestionEntity } from './new-question.entity'
-import { NewSelectionEntity } from './new-selection.entity'
+import { NewQuestionEntity } from './new-question.entity.js'
+import { NewSelectionEntity } from './new-selection.entity.js'
 
 @Entity('new_user_responses')
 @Index('idx_new_user_responses_user_id', ['userId'])

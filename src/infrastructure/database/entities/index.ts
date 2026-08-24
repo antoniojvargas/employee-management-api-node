@@ -1,4 +1,4 @@
-export { NewQuestionEntity } from './new-question.entity'
-export { NewSelectionEntity } from './new-selection.entity'
-export { NewTranslationEntity } from './new-translation.entity'
-export { NewUserResponseEntity } from './new-user-response.entity'
+export { NewQuestionEntity } from './new-question.entity.js'
+export { NewSelectionEntity } from './new-selection.entity.js'
+export { NewTranslationEntity } from './new-translation.entity.js'
+export { NewUserResponseEntity } from './new-user-response.entity.js'
