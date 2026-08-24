@@ -1,0 +1,25 @@
+{
+  "name": "employee-management-api-node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Employee management API - Clean Architecture, Fastify, TypeORM, PostgreSQL",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "migration:run": "typeorm migration:run -d dist/infrastructure/database/data-source.js",
+    "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
