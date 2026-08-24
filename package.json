@@ -13,10 +13,20 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "migration:run": "typeorm migration:run -d dist/infrastructure/database/data-source.js",
-    "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js"
+    "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,mjs}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "fastify": "^5.2.0",
@@ -33,6 +43,8 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-promise": "^7.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.9.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
