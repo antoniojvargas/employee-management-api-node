@@ -46,6 +46,28 @@ api → infrastructure → application → domain
 - **infrastructure** implementa los puertos definidos en `application` y `domain`
 - **api** orquesta el flujo e inyecta las dependencias
 
+```mermaid
+flowchart LR
+    client(["HTTP Client"]) --> api
+
+    subgraph layers["Clean Architecture"]
+        direction TB
+        api["api<br/>rutas Fastify · controllers · schemas"]
+        infra["infrastructure<br/>TypeORM · repositorios · migraciones"]
+        app["application<br/>casos de uso · puertos"]
+        domain["domain<br/>entidades · value objects · reglas de negocio"]
+
+        api -- depende de --> infra
+        infra -- depende de --> app
+        app -- depende de --> domain
+    end
+
+    infra --> db[("PostgreSQL")]
+
+    style domain fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style layers fill:#fafafa,stroke:#bdbdbd
+```
+
 ## Estado del proyecto
 
 🚧 En construcción — fase inicial de diseño de dominio y persistencia.
