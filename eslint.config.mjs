@@ -26,6 +26,7 @@ export default [
     },
     rules: {
       ...pluginTs.configs.recommended.rules,
+      'no-undef': 'off',
       'no-var': 'error',
       'prefer-const': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
