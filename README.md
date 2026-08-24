@@ -18,6 +18,34 @@ Construir una API para la administración de empleados aplicando los principios 
 - **Arquitectura:** Clean Architecture (domain / application / infrastructure)
 - **Testing:** Jest + Supertest
 
+## Arquitectura
+
+Estructura basada en Clean Architecture:
+
+```
+src/
+├── api/              # Capa de entrada: rutas Fastify, controllers, schemas HTTP
+├── application/      # Casos de uso y puertos de la aplicación
+├── domain/           # Entidades, value objects y reglas de negocio puras
+└── infrastructure/   # Detalles técnicos: TypeORM, repositorios, servicios externos
+    └── database/
+        ├── entities/
+        └── migrations/
+```
+
+### Regla de dependencias
+
+Las dependencias apuntan siempre hacia adentro, hacia el dominio:
+
+```
+api → infrastructure → application → domain
+```
+
+- **domain** no depende de ninguna otra capa ni del framework
+- **application** solo puede importar de `domain`
+- **infrastructure** implementa los puertos definidos en `application` y `domain`
+- **api** orquesta el flujo e inyecta las dependencias
+
 ## Estado del proyecto
 
 🚧 En construcción — fase inicial de diseño de dominio y persistencia.
