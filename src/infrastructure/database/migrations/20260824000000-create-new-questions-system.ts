@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm'
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateNewQuestionsSystem20260824000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -10,7 +10,7 @@ export class CreateNewQuestionsSystem20260824000000 implements MigrationInterfac
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now()
       )
-    `)
+    `);
 
     await queryRunner.query(`
       CREATE TABLE new_selections (
@@ -20,10 +20,10 @@ export class CreateNewQuestionsSystem20260824000000 implements MigrationInterfac
         position integer NOT NULL DEFAULT 0,
         created_at timestamptz NOT NULL DEFAULT now()
       )
-    `)
+    `);
     await queryRunner.query(
       `CREATE INDEX idx_new_selections_question_id ON new_selections (question_id)`,
-    )
+    );
 
     await queryRunner.query(`
       CREATE TABLE new_translations (
@@ -36,10 +36,10 @@ export class CreateNewQuestionsSystem20260824000000 implements MigrationInterfac
         updated_at timestamptz NOT NULL DEFAULT now(),
         CONSTRAINT uq_new_translations_entity_locale UNIQUE (entity_table, entity_id, locale)
       )
-    `)
+    `);
     await queryRunner.query(
       `CREATE INDEX idx_new_translations_entity ON new_translations (entity_table, entity_id)`,
-    )
+    );
 
     await queryRunner.query(`
       CREATE TABLE new_user_responses (
@@ -55,22 +55,22 @@ export class CreateNewQuestionsSystem20260824000000 implements MigrationInterfac
         CONSTRAINT chk_new_user_responses_custom_without_selection
           CHECK (NOT is_custom OR selection_id IS NULL)
       )
-    `)
+    `);
     await queryRunner.query(
       `CREATE INDEX idx_new_user_responses_user_id ON new_user_responses (user_id)`,
-    )
+    );
     await queryRunner.query(
       `CREATE INDEX idx_new_user_responses_question_id ON new_user_responses (question_id)`,
-    )
+    );
     await queryRunner.query(
       `CREATE INDEX idx_new_user_responses_selection_id ON new_user_responses (selection_id)`,
-    )
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS new_user_responses`)
-    await queryRunner.query(`DROP TABLE IF EXISTS new_translations`)
-    await queryRunner.query(`DROP TABLE IF EXISTS new_selections`)
-    await queryRunner.query(`DROP TABLE IF EXISTS new_questions`)
+    await queryRunner.query(`DROP TABLE IF EXISTS new_user_responses`);
+    await queryRunner.query(`DROP TABLE IF EXISTS new_translations`);
+    await queryRunner.query(`DROP TABLE IF EXISTS new_selections`);
+    await queryRunner.query(`DROP TABLE IF EXISTS new_questions`);
   }
 }

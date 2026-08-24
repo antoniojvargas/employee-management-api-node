@@ -1,6 +1,14 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
-import { NewQuestionEntity } from './new-question.entity.js'
-import { NewSelectionEntity } from './new-selection.entity.js'
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { NewQuestionEntity } from './new-question.entity.js';
+import { NewSelectionEntity } from './new-selection.entity.js';
 
 @Entity('new_user_responses')
 @Index('idx_new_user_responses_user_id', ['userId'])
@@ -8,31 +16,31 @@ import { NewSelectionEntity } from './new-selection.entity.js'
 @Index('idx_new_user_responses_selection_id', ['selectionId'])
 export class NewUserResponseEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @Column({ type: 'uuid', name: 'user_id' })
-  userId!: string
+  userId!: string;
 
   @Column({ type: 'uuid', name: 'question_id' })
-  questionId!: string
+  questionId!: string;
 
   @Column({ type: 'uuid', name: 'selection_id', nullable: true })
-  selectionId!: string | null
+  selectionId!: string | null;
 
   @ManyToOne(() => NewQuestionEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'question_id' })
-  question!: NewQuestionEntity
+  question!: NewQuestionEntity;
 
   @ManyToOne(() => NewSelectionEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'selection_id' })
-  selection!: NewSelectionEntity | null
+  selection!: NewSelectionEntity | null;
 
   @Column({ type: 'text', nullable: true })
-  value!: string | null
+  value!: string | null;
 
   @Column({ type: 'boolean', default: false, name: 'is_custom' })
-  isCustom!: boolean
+  isCustom!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
-  createdAt!: Date
+  createdAt!: Date;
 }

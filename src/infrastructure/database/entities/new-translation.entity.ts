@@ -1,26 +1,33 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('new_translations')
 @Index('idx_new_translations_entity', ['entityTable', 'entityId'])
 export class NewTranslationEntity {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  id!: string;
 
   @Column({ type: 'varchar', length: 64, name: 'entity_table' })
-  entityTable!: 'new_questions' | 'new_selections'
+  entityTable!: 'new_questions' | 'new_selections';
 
   @Column({ type: 'uuid', name: 'entity_id' })
-  entityId!: string
+  entityId!: string;
 
   @Column({ type: 'varchar', length: 10 })
-  locale!: string
+  locale!: string;
 
   @Column({ type: 'text' })
-  text!: string
+  text!: string;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
-  createdAt!: Date
+  createdAt!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
-  updatedAt!: Date
+  updatedAt!: Date;
 }
