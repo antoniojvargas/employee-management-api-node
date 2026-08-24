@@ -8,11 +8,12 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "echo \"[tests] pendiente: configurar Jest + Supertest\"",
     "migration:run": "typeorm migration:run -d dist/infrastructure/database/data-source.js",
     "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js",
     "prepare": "husky"
@@ -50,7 +51,7 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.9.6",
     "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.7.0"
   }
 }
