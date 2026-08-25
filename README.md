@@ -40,6 +40,45 @@ cp .env.example .env
 
 El archivo `.env` está ignorado por git: nunca lo commitees con valores reales.
 
+## Arranque con Docker
+
+Levanta la API y PostgreSQL con un solo comando:
+
+```bash
+docker compose up --build
+```
+
+### Servicios y puertos
+
+| Servicio | Puerto expuesto | Descripción            |
+| -------- | --------------- | ---------------------- |
+| `api`    | `8080`          | API Fastify (HTTP)     |
+| `db`     | `5432`          | PostgreSQL 16 (Alpine) |
+
+### Credenciales de la base de datos (seed)
+
+| Campo    | Valor                 |
+| -------- | --------------------- |
+| Host     | `localhost`           |
+| Puerto   | `5432`                |
+| Usuario  | `employee`            |
+| Password | `employee`            |
+| DB       | `employee_management` |
+
+### Atajos con Make
+
+```bash
+make up        # docker compose up -d --build
+make down      # docker compose down
+make logs      # docker compose logs -f api
+make test      # npm test
+make migrate   # npm run migration:run
+```
+
+### Hot-reload en desarrollo
+
+En desarrollo se aplica automáticamente `docker-compose.override.yml`, que monta `src/` como volumen y ejecuta `tsx watch` para hot-reload.
+
 ## Arquitectura
 
 Estructura basada en Clean Architecture:
