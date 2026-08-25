@@ -79,6 +79,68 @@ make migrate   # npm run migration:run
 
 En desarrollo se aplica automáticamente `docker-compose.override.yml`, que monta `src/` como volumen y ejecuta `tsx watch` para hot-reload.
 
+## Migraciones de base de datos
+
+TypeORM opera en modo **migraciones explícitas** (`synchronize: false`). Esto significa que el esquema de la base de datos **nunca se modifica automáticamente** — cada cambio debe ser generado como una migración y aplicado de forma controlada.
+
+### ¿Por qué `synchronize: false`?
+
+- `synchronize: true` altera tablas automáticamente al reiniciar la app, lo cual puede causar **pérdida de datos** en producción
+- Las migraciones dan **control total**: cada cambio es un archivo versionado, auditable y revirtible
+- Permite aplicar cambios de schema **antes o después** del deploy, no solo al iniciar la app
+
+### Flujo de trabajo
+
+**1. Modificar una entidad** (ej. agregar una columna en `src/infrastructure/database/entities/`)
+
+**2. Generar la migración** comparando el estado de las entidades contra la DB:
+
+```bash
+npm run build
+npm run migration:generate -- src/infrastructure/database/migrations/20260825-add-description-to-questions
+```
+
+TypeORM compara las entidades compiladas contra el esquema actual y genera el archivo de migración con los `UP` y `DOWN` necesarios.
+
+**3. Revisar el archivo generado** en `src/infrastructure/database/migrations/`
+
+**4. Aplicar la migración:**
+
+```bash
+npm run migration:run
+```
+
+**5. Revertir si es necesario:**
+
+```bash
+npm run migration:revert
+```
+
+**6. Verificar estado de migraciones:**
+
+```bash
+npm run migration:show
+```
+
+### Scripts disponibles
+
+| Script                                 | Descripción                              |
+| -------------------------------------- | ---------------------------------------- |
+| `npm run migration:generate -- <path>` | Genera migración desde diff de entidades |
+| `npm run migration:run`                | Aplica migraciones pendientes            |
+| `npm run migration:revert`             | Revierte la última migración aplicada    |
+| `npm run migration:show`               | Lista migraciones y su estado            |
+
+### Archivos de migración
+
+```
+src/infrastructure/database/migrations/
+├── 20260825000000-initial-setup.ts
+└── 20260824000000-create-new-questions-system.ts
+```
+
+Cada archivo exporta una clase con `up()` (aplicar) y `down()` (revertir). Las migraciones se ejecutan en orden cronológico.
+
 ## Arquitectura
 
 Estructura basada en Clean Architecture:
