@@ -18,7 +18,7 @@ export const AppDataSource = new DataSource({
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
   synchronize: false,
-  logging: env.NODE_ENV === 'development',
+  logging: env.NODE_ENV === 'development' ? ['query', 'error'] : false,
   entities: [NewQuestionEntity, NewSelectionEntity, NewTranslationEntity, NewUserResponseEntity],
   migrations: [InitialSetup20260825000000, CreateNewQuestionsSystem20260824000000],
 });
