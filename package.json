@@ -18,6 +18,7 @@
     "migration:run": "typeorm migration:run -d dist/infrastructure/database/data-source.js",
     "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js",
     "migration:show": "typeorm migration:show -d dist/infrastructure/database/data-source.js",
+    "seed": "tsx src/infrastructure/database/seeders/seed.ts",
     "prepare": "husky"
   },
   "engines": {
