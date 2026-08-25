@@ -14,8 +14,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "echo \"[tests] pendiente: configurar Jest + Supertest\"",
+    "migration:generate": "typeorm migration:generate -d dist/infrastructure/database/data-source.js",
     "migration:run": "typeorm migration:run -d dist/infrastructure/database/data-source.js",
     "migration:revert": "typeorm migration:revert -d dist/infrastructure/database/data-source.js",
+    "migration:show": "typeorm migration:show -d dist/infrastructure/database/data-source.js",
     "prepare": "husky"
   },
   "engines": {
