@@ -19,6 +19,12 @@ export const AppDataSource = new DataSource({
   database: env.DB_NAME,
   synchronize: false,
   logging: env.NODE_ENV === 'development' ? ['query', 'error'] : false,
+  extra: {
+    // Pool de conexiones pg — valores explícitos en lugar de defaults
+    max: 10, // máximo de conexiones simultáneas; suficiente para API monolítica con tráfico moderado
+    idleTimeoutMillis: 30_000, // cierra conexiones inactivas tras 30s para liberar recursos en el DB server
+    connectionTimeoutMillis: 5_000, // falla rápido (5s) si la DB no responde en vez de colgar la request
+  },
   entities: [NewQuestionEntity, NewSelectionEntity, NewTranslationEntity, NewUserResponseEntity],
   migrations: [InitialSetup20260825000000, CreateNewQuestionsSystem20260824000000],
 });
