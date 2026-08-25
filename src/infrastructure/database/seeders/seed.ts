@@ -1,35 +1,20 @@
-import 'reflect-metadata';
-import { AppDataSource } from '../data-source.js';
+import { DataSource } from 'typeorm';
 
-async function seed(): Promise<void> {
+export async function runSeed(dataSource: DataSource): Promise<void> {
+  const queryRunner = dataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
   try {
-    await AppDataSource.initialize();
-    console.log('Conexión a la base de datos establecida');
+    // TODO: insertar datos iniciales aquí
+    // Ejemplo:
+    // await queryRunner.query(`INSERT INTO ...`);
 
-    const queryRunner = AppDataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      // TODO: insertar datos iniciales aquí
-      // Ejemplo:
-      // await queryRunner.query(`INSERT INTO ...`);
-
-      await queryRunner.commitTransaction();
-      console.log('Seed ejecutado correctamente');
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      console.error('Error durante el seed — transacción revertida', err);
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    await queryRunner.commitTransaction();
   } catch (err) {
-    console.error('Error al conectar con la base de datos', err);
-    process.exitCode = 1;
+    await queryRunner.rollbackTransaction();
+    throw err;
   } finally {
-    await AppDataSource.destroy();
+    await queryRunner.release();
   }
 }
-
-void seed();
