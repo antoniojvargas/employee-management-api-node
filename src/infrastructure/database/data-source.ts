@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { env } from '../config/env.js';
 import {
+  EmployeeEntity,
   NewQuestionEntity,
   NewSelectionEntity,
   NewTranslationEntity,
@@ -25,6 +26,12 @@ export const AppDataSource = new DataSource({
     idleTimeoutMillis: 30_000, // cierra conexiones inactivas tras 30s para liberar recursos en el DB server
     connectionTimeoutMillis: 5_000, // falla rápido (5s) si la DB no responde en vez de colgar la request
   },
-  entities: [NewQuestionEntity, NewSelectionEntity, NewTranslationEntity, NewUserResponseEntity],
+  entities: [
+    EmployeeEntity,
+    NewQuestionEntity,
+    NewSelectionEntity,
+    NewTranslationEntity,
+    NewUserResponseEntity,
+  ],
   migrations: [InitialSetup20260825000000, CreateNewQuestionsSystem20260824000000],
 });
