@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { env } from '../config/env.js';
 import {
+  DepartmentEntity,
   EmployeeEntity,
   NewQuestionEntity,
   NewSelectionEntity,
@@ -27,6 +28,7 @@ export const AppDataSource = new DataSource({
     connectionTimeoutMillis: 5_000, // falla rápido (5s) si la DB no responde en vez de colgar la request
   },
   entities: [
+    DepartmentEntity,
     EmployeeEntity,
     NewQuestionEntity,
     NewSelectionEntity,

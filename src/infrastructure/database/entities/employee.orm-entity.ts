@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { DepartmentEntity } from './department.orm-entity.js';
 
 @Entity('employees')
 export class EmployeeEntity {
@@ -22,6 +25,10 @@ export class EmployeeEntity {
 
   @Column({ type: 'uuid', name: 'department_id' })
   departmentId!: string;
+
+  @ManyToOne(() => DepartmentEntity, (department) => department.employees)
+  @JoinColumn({ name: 'department_id' })
+  department!: DepartmentEntity;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
