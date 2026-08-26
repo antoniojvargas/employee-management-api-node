@@ -5,9 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  ManyToMany,
   JoinColumn,
 } from 'typeorm';
 import { DepartmentEntity } from './department.orm-entity.js';
+import { ProjectEntity } from './project.orm-entity.js';
 
 @Entity('employees')
 export class EmployeeEntity {
@@ -29,6 +31,9 @@ export class EmployeeEntity {
   @ManyToOne(() => DepartmentEntity, (department) => department.employees)
   @JoinColumn({ name: 'department_id' })
   department!: DepartmentEntity;
+
+  @ManyToMany(() => ProjectEntity, (project) => project.employees)
+  projects!: ProjectEntity[];
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

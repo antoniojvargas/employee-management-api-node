@@ -8,6 +8,7 @@ import {
   NewSelectionEntity,
   NewTranslationEntity,
   NewUserResponseEntity,
+  ProjectEntity,
 } from './entities/index.js';
 import { CreateNewQuestionsSystem20260824000000 } from './migrations/20260824000000-create-new-questions-system.js';
 import { InitialSetup20260825000000 } from './migrations/20260825000000-initial-setup.js';
@@ -34,6 +35,7 @@ export const AppDataSource = new DataSource({
     NewSelectionEntity,
     NewTranslationEntity,
     NewUserResponseEntity,
+    ProjectEntity,
   ],
   migrations: [InitialSetup20260825000000, CreateNewQuestionsSystem20260824000000],
 });
