@@ -13,6 +13,7 @@ import {
 } from './entities/index.js';
 import { CreateNewQuestionsSystem20260824000000 } from './migrations/20260824000000-create-new-questions-system.js';
 import { InitialSetup20260825000000 } from './migrations/20260825000000-initial-setup.js';
+import { CreateDomainEntities20260826000000 } from './migrations/20260826000000-create-domain-entities.js';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -39,5 +40,9 @@ export const AppDataSource = new DataSource({
     PositionHistoryEntity,
     ProjectEntity,
   ],
-  migrations: [InitialSetup20260825000000, CreateNewQuestionsSystem20260824000000],
+  migrations: [
+    InitialSetup20260825000000,
+    CreateNewQuestionsSystem20260824000000,
+    CreateDomainEntities20260826000000,
+  ],
 });
