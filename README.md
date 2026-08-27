@@ -135,11 +135,98 @@ npm run migration:show
 
 ```
 src/infrastructure/database/migrations/
+├── 20260824000000-create-new-questions-system.ts
 ├── 20260825000000-initial-setup.ts
-└── 20260824000000-create-new-questions-system.ts
+└── 20260826000000-create-domain-entities.ts
 ```
 
 Cada archivo exporta una clase con `up()` (aplicar) y `down()` (revertir). Las migraciones se ejecutan en orden cronológico.
+
+## Database Schema
+
+El esquema de persistencia para el dominio de empleados está modelado con TypeORM. Las columnas usan `snake_case` en base de datos y `camelCase` en código; las claves primarias son UUID con `uuid_generate_v4()`; los timestamps `created_at` / `updated_at` usan `timestamptz`.
+
+### Entidades
+
+| Entidad                 | Tabla              | Clave primaria | Relaciones                                                        |
+| ----------------------- | ------------------ | -------------- | ----------------------------------------------------------------- |
+| `EmployeeEntity`        | `employees`        | `id` (uuid)    | N:1 → `departments` · N:M → `projects` · 1:N → `position_history` |
+| `DepartmentEntity`      | `departments`      | `id` (uuid)    | 1:N → `employees`                                                 |
+| `ProjectEntity`         | `projects`         | `id` (uuid)    | N:M → `employees`                                                 |
+| `PositionHistoryEntity` | `position_history` | `id` (uuid)    | N:1 → `employees`                                                 |
+
+### Relaciones y reglas de borrado (`onDelete`)
+
+| Relación                     | Tipo         | `onDelete`              | Comportamiento al eliminar el padre                                                               |
+| ---------------------------- | ------------ | ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `Employee → Department`      | `ManyToOne`  | `SET NULL`              | El empleado queda sin departamento (`department_id` = NULL)                                       |
+| `PositionHistory → Employee` | `ManyToOne`  | `CASCADE`               | Se eliminan todos los registros del empleado                                                      |
+| `Project ↔ Employee`         | `ManyToMany` | `CASCADE` / `NO ACTION` | Se limpia la fila de la tabla intermedia al borrar el proyecto; los empleados no se ven afectados |
+
+- **`SET NULL`** en `Employee → Department`: eliminar un departamento no destruye a sus empleados; quedan desasignados y pueden reasignarse manualmente.
+- **`CASCADE`** en `PositionHistory → Employee`: el historial de posiciones es intrínsecamente dependiente del empleado.
+- La tabla intermedia `employee_projects` usa `ON DELETE CASCADE` hacia `projects` y no afecta a la entidad `employees` al eliminarse un proyecto.
+
+### Diagrama entidad-relación
+
+```mermaid
+erDiagram
+    DEPARTMENTS ||--o{ EMPLOYEES : "1 a N"
+    EMPLOYEES }o--o{ PROJECTS : "N a M"
+    EMPLOYEES ||--o{ POSITION_HISTORY : "1 a N"
+    PROJECTS ||--o{ EMPLOYEE_PROJECTS : ""
+    EMPLOYEES ||--o{ EMPLOYEE_PROJECTS : ""
+
+    DEPARTMENTS {
+        uuid id PK
+        varchar name
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    EMPLOYEES {
+        uuid id PK
+        varchar name
+        varchar current_position
+        numeric salary
+        uuid department_id FK "SET NULL"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    PROJECTS {
+        uuid id PK
+        varchar name
+        date start_date
+        date end_date
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    EMPLOYEE_PROJECTS {
+        uuid projectsId FK
+        uuid employeesId FK
+    }
+    POSITION_HISTORY {
+        uuid id PK
+        uuid employee_id FK "CASCADE"
+        varchar position
+        date start_date
+        date end_date
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+### Índices
+
+Los índices se definen explícitamente en las columnas de claves foráneas para acelerar los JOINs y la búsqueda por relación:
+
+| Índice                      | Tabla               | Columna         |
+| --------------------------- | ------------------- | --------------- |
+| `IDX_678a3540f843823784b0f` | `employees`         | `department_id` |
+| `IDX_a6fd2cf9f5d0e79a05a2a` | `position_history`  | `employee_id`   |
+| `IDX_e1e40bcc8b98bf014953e` | `employee_projects` | `projectsId`    |
+| `IDX_0e4f579cd84295044f160` | `employee_projects` | `employeesId`   |
+
+> Además de estas tablas de dominio, el esquema incluye el subsistema de preguntas (`new_questions`, `new_selections`, `new_translations`, `new_user_responses`), creado por la migración `CreateNewQuestionsSystem20260824000000`.
 
 ## Arquitectura
 
@@ -206,4 +293,4 @@ flowchart LR
 
 ## Estado del proyecto
 
-🚧 En construcción — fase inicial de diseño de dominio y persistencia.
+🚧 En construcción — fase de diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas.
