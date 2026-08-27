@@ -154,18 +154,22 @@ El esquema de persistencia para el dominio de empleados está modelado con TypeO
 | `DepartmentEntity`      | `departments`      | `id` (uuid)    | 1:N → `employees`                                                 |
 | `ProjectEntity`         | `projects`         | `id` (uuid)    | N:M → `employees`                                                 |
 | `PositionHistoryEntity` | `position_history` | `id` (uuid)    | N:1 → `employees`                                                 |
+| `UserEntity`            | `users`            | `id` (uuid)    | N:M → `roles`                                                     |
+| `RoleEntity`            | `roles`            | `id` (uuid)    | N:M → `users`                                                     |
 
 ### Relaciones y reglas de borrado (`onDelete`)
 
-| Relación                     | Tipo         | `onDelete`              | Comportamiento al eliminar el padre                                                               |
-| ---------------------------- | ------------ | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `Employee → Department`      | `ManyToOne`  | `SET NULL`              | El empleado queda sin departamento (`department_id` = NULL)                                       |
-| `PositionHistory → Employee` | `ManyToOne`  | `CASCADE`               | Se eliminan todos los registros del empleado                                                      |
-| `Project ↔ Employee`         | `ManyToMany` | `CASCADE` / `NO ACTION` | Se limpia la fila de la tabla intermedia al borrar el proyecto; los empleados no se ven afectados |
+| Relación                     | Tipo         | `onDelete`              | Comportamiento al eliminar el padre                                                                                               |
+| ---------------------------- | ------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Employee → Department`      | `ManyToOne`  | `SET NULL`              | El empleado queda sin departamento (`department_id` = NULL)                                                                       |
+| `PositionHistory → Employee` | `ManyToOne`  | `CASCADE`               | Se eliminan todos los registros del empleado                                                                                      |
+| `Project ↔ Employee`         | `ManyToMany` | `CASCADE` / `NO ACTION` | Se limpia la fila de la tabla intermedia al borrar el proyecto; los empleados no se ven afectados                                 |
+| `User ↔ Role`                | `ManyToMany` | `CASCADE`               | Al borrar un usuario o un rol se limpia la fila en la tabla intermedia `user_roles` (equivalente simplificado a ASP.NET Identity) |
 
 - **`SET NULL`** en `Employee → Department`: eliminar un departamento no destruye a sus empleados; quedan desasignados y pueden reasignarse manualmente.
 - **`CASCADE`** en `PositionHistory → Employee`: el historial de posiciones es intrínsecamente dependiente del empleado.
 - La tabla intermedia `employee_projects` usa `ON DELETE CASCADE` hacia `projects` y no afecta a la entidad `employees` al eliminarse un proyecto.
+- La tabla intermedia `user_roles` usa `ON DELETE CASCADE` hacia ambas tablas: permite que cada usuario tenga múltiples roles y que los roles se reutilicen entre usuarios.
 
 ### Diagrama entidad-relación
 
@@ -176,6 +180,9 @@ erDiagram
     EMPLOYEES ||--o{ POSITION_HISTORY : "1 a N"
     PROJECTS ||--o{ EMPLOYEE_PROJECTS : ""
     EMPLOYEES ||--o{ EMPLOYEE_PROJECTS : ""
+    USERS }o--o{ ROLES : "N a M"
+    USERS ||--o{ USER_ROLES : ""
+    ROLES ||--o{ USER_ROLES : ""
 
     DEPARTMENTS {
         uuid id PK
@@ -213,6 +220,22 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at
     }
+    USERS {
+        uuid id PK
+        varchar email UK
+        varchar password_hash
+        timestamptz created_at
+    }
+    ROLES {
+        uuid id PK
+        varchar name UK
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    USER_ROLES {
+        uuid usersId FK
+        uuid rolesId FK
+    }
 ```
 
 ### Índices
@@ -225,8 +248,10 @@ Los índices se definen explícitamente en las columnas de claves foráneas para
 | `IDX_a6fd2cf9f5d0e79a05a2a` | `position_history`  | `employee_id`   |
 | `IDX_e1e40bcc8b98bf014953e` | `employee_projects` | `projectsId`    |
 | `IDX_0e4f579cd84295044f160` | `employee_projects` | `employeesId`   |
+| `IDX_user_roles_usersId`    | `user_roles`        | `usersId`       |
+| `IDX_user_roles_rolesId`    | `user_roles`        | `rolesId`       |
 
-> Además de estas tablas de dominio, el esquema incluye el subsistema de preguntas (`new_questions`, `new_selections`, `new_translations`, `new_user_responses`), creado por la migración `CreateNewQuestionsSystem20260824000000`.
+> Además de estas tablas de dominio, el esquema incluye el subsistema de preguntas (`new_questions`, `new_selections`, `new_translations`, `new_user_responses`), creado por la migración `CreateNewQuestionsSystem20260824000000`, y el subsistema de autenticación (`users`, `roles`, `user_roles`), creado por la migración `CreateUsersRoles20260827000000`.
 
 ## Arquitectura
 

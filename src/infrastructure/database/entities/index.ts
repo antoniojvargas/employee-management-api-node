@@ -2,6 +2,8 @@ export { DepartmentEntity } from './department.orm-entity.js';
 export { EmployeeEntity } from './employee.orm-entity.js';
 export { PositionHistoryEntity } from './position-history.orm-entity.js';
 export { ProjectEntity } from './project.orm-entity.js';
+export { RoleEntity } from './role.orm-entity.js';
+export { UserEntity } from './user.orm-entity.js';
 export { MigraineEntryEntity } from './migraine-entry.orm-entity.js';
 export { NewQuestionEntity } from './new-question.entity.js';
 export { NewSelectionEntity } from './new-selection.entity.js';

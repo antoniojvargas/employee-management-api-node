@@ -4,6 +4,8 @@ import { DepartmentEntity } from '../../entities/department.orm-entity.js';
 import { EmployeeEntity } from '../../entities/employee.orm-entity.js';
 import { PositionHistoryEntity } from '../../entities/position-history.orm-entity.js';
 import { ProjectEntity } from '../../entities/project.orm-entity.js';
+import { RoleEntity } from '../../entities/role.orm-entity.js';
+import { UserEntity } from '../../entities/user.orm-entity.js';
 
 function makeDate(iso: string): Date {
   return new Date(`${iso}T12:00:00Z`);
@@ -77,6 +79,32 @@ describe('domain entities', () => {
       expect(history.endDate).toBeInstanceOf(Date);
       expect(history.createdAt).toBeInstanceOf(Date);
       expect(history.updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('instantiates UserEntity with primitive fields', () => {
+      const user = new UserEntity();
+      user.id = 'user-1';
+      user.email = 'ada@example.com';
+      user.passwordHash = '$2b$10$hashed';
+      user.createdAt = makeDate('2026-01-01');
+
+      expect(user.id).toBe('user-1');
+      expect(user.email).toBe('ada@example.com');
+      expect(user.passwordHash).toBe('$2b$10$hashed');
+      expect(user.createdAt).toBeInstanceOf(Date);
+    });
+
+    it('instantiates RoleEntity with primitive fields', () => {
+      const role = new RoleEntity();
+      role.id = 'role-1';
+      role.name = 'Admin';
+      role.createdAt = makeDate('2026-01-01');
+      role.updatedAt = makeDate('2026-01-01');
+
+      expect(role.id).toBe('role-1');
+      expect(role.name).toBe('Admin');
+      expect(role.createdAt).toBeInstanceOf(Date);
+      expect(role.updatedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -160,6 +188,34 @@ describe('domain entities', () => {
       expect(history.employee).toBeInstanceOf(EmployeeEntity);
       expect(history.employee).toBe(employee);
     });
+
+    it('UserEntity.roles is a plural ManyToMany array of RoleEntity', () => {
+      const user = new UserEntity();
+      const roleA = new RoleEntity();
+      roleA.id = 'role-a';
+      const roleB = new RoleEntity();
+      roleB.id = 'role-b';
+
+      user.roles = [roleA, roleB];
+
+      expect(Array.isArray(user.roles)).toBe(true);
+      expect(user.roles).toHaveLength(2);
+      user.roles.forEach((role) => {
+        expect(role).toBeInstanceOf(RoleEntity);
+      });
+    });
+
+    it('RoleEntity.users is a plural ManyToMany array of UserEntity', () => {
+      const role = new RoleEntity();
+      const user = new UserEntity();
+      user.id = 'user-1';
+
+      role.users = [user];
+
+      expect(Array.isArray(role.users)).toBe(true);
+      expect(role.users).toHaveLength(1);
+      expect(role.users[0]).toBeInstanceOf(UserEntity);
+    });
   });
 
   describe('TypeORM metadata (isolated, no DB connection)', () => {
@@ -235,6 +291,28 @@ describe('domain entities', () => {
     it('declares an index on PositionHistoryEntity (employee FK)', () => {
       const index = storage.indices.find((i) => i.target === PositionHistoryEntity);
       expect(index).toBeDefined();
+    });
+
+    it('marks UserEntity.roles as ManyToMany', () => {
+      const rel = storage.relations.find(
+        (r) => r.target === UserEntity && r.propertyName === 'roles',
+      );
+      expect(rel).toBeDefined();
+      expect(rel?.relationType).toBe('many-to-many');
+    });
+
+    it('marks RoleEntity.users as ManyToMany', () => {
+      const rel = storage.relations.find(
+        (r) => r.target === RoleEntity && r.propertyName === 'users',
+      );
+      expect(rel).toBeDefined();
+      expect(rel?.relationType).toBe('many-to-many');
+    });
+
+    it('declares the user_roles join table on UserEntity', () => {
+      const joinTable = storage.joinTables.find((j) => j.target === UserEntity);
+      expect(joinTable).toBeDefined();
+      expect(joinTable?.name).toBe('user_roles');
     });
   });
 });
