@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
   ManyToOne,
   ManyToMany,
   OneToMany,
@@ -27,6 +28,7 @@ export class EmployeeEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   salary!: number;
 
+  @Index()
   @Column({ type: 'uuid', name: 'department_id', nullable: true })
   departmentId!: string | null;
 
