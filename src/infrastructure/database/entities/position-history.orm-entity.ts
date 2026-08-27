@@ -26,7 +26,11 @@ export class PositionHistoryEntity {
   @Column({ type: 'date', name: 'end_date' })
   endDate!: Date;
 
-  @ManyToOne(() => EmployeeEntity, (employee) => employee.positionHistory)
+  // CASCADE: al eliminar un empleado, se eliminan todos sus registros de historial.
+  // La historia de posiciones es intrínsecamente dependiente del empleado.
+  @ManyToOne(() => EmployeeEntity, (employee) => employee.positionHistory, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'employee_id' })
   employee!: EmployeeEntity;
 

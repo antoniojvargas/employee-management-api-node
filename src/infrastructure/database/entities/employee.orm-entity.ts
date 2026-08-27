@@ -27,12 +27,16 @@ export class EmployeeEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   salary!: number;
 
-  @Column({ type: 'uuid', name: 'department_id' })
-  departmentId!: string;
+  @Column({ type: 'uuid', name: 'department_id', nullable: true })
+  departmentId!: string | null;
 
-  @ManyToOne(() => DepartmentEntity, (department) => department.employees)
+  // SET NULL: al eliminar un departamento, los empleados quedan sin asignación
+  // en vez de cascade. Permite reasignar manualmente antes de borrar definitivamente.
+  @ManyToOne(() => DepartmentEntity, (department) => department.employees, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'department_id' })
-  department!: DepartmentEntity;
+  department!: DepartmentEntity | null;
 
   @ManyToMany(() => ProjectEntity, (project) => project.employees)
   projects!: ProjectEntity[];
