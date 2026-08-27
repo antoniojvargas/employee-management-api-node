@@ -14,7 +14,7 @@ export class TypeOrmMigraineRepository implements MigraineRepository {
     const rows = await this.repo.find({
       where: {
         userId,
-        date: Between(startDate, endDate) as MigraineEntryEntity['date'],
+        date: Between(startDate, endDate),
       },
       order: { date: 'ASC' },
     });
