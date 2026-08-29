@@ -11,6 +11,8 @@ const envSchema = z.object({
   DB_NAME: z.string().min(1),
   JWT_SECRET: z.string().min(1),
   JWT_EXPIRES_IN: z.string().default('1d'),
+  ADMIN_EMAIL: z.string().email().default('admin@example.com'),
+  ADMIN_PASSWORD: z.string().min(8).default('Admin1234'),
 });
 
 const parsed = envSchema.safeParse(process.env);
