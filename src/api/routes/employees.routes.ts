@@ -1,5 +1,10 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { ZodError } from 'zod';
 import { Roles } from '../../application/constants/roles.js';
+import {
+  createEmployeeDtoSchema,
+  type CreateEmployeeDto,
+} from '../../application/dtos/employee.dto.js';
 import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
 import { AppDataSource } from '../../infrastructure/database/data-source.js';
 import { EmployeeEntity } from '../../infrastructure/database/entities/employee.orm-entity.js';
@@ -32,6 +37,25 @@ export async function employeeRoutes(
         return reply.code(404).send({ message: 'Empleado no encontrado' });
       }
       return reply.code(200).send(employee);
+    },
+  );
+
+  fastify.post(
+    '/api/employees',
+    { preHandler: fastify.requireRole(Roles.Admin) },
+    async (request, reply) => {
+      let input: CreateEmployeeDto;
+      try {
+        input = createEmployeeDtoSchema.parse(request.body);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
+        }
+        throw err;
+      }
+
+      const employee = await employeeService.create(input);
+      return reply.code(201).header('Location', `/api/employees/${employee.id}`).send(employee);
     },
   );
 }
