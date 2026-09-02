@@ -4,6 +4,8 @@ import { Roles } from '../../application/constants/roles.js';
 import {
   createEmployeeDtoSchema,
   type CreateEmployeeDto,
+  type UpdateEmployeeDto,
+  updateEmployeeDtoSchema,
 } from '../../application/dtos/employee.dto.js';
 import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
 import { AppDataSource } from '../../infrastructure/database/data-source.js';
@@ -56,6 +58,30 @@ export async function employeeRoutes(
 
       const employee = await employeeService.create(input);
       return reply.code(201).header('Location', `/api/employees/${employee.id}`).send(employee);
+    },
+  );
+
+  fastify.put(
+    '/api/employees/:id',
+    { preHandler: fastify.requireRole(Roles.Admin) },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+
+      let input: UpdateEmployeeDto;
+      try {
+        input = updateEmployeeDtoSchema.parse(request.body);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
+        }
+        throw err;
+      }
+
+      const employee = await employeeService.update(id, input);
+      if (!employee) {
+        return reply.code(404).send({ message: 'Empleado no encontrado' });
+      }
+      return reply.code(200).send(employee);
     },
   );
 }
