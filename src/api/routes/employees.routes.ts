@@ -21,4 +21,17 @@ export async function employeeRoutes(
       return reply.code(200).send(employeesWithBonus);
     },
   );
+
+  fastify.get(
+    '/api/employees/:id',
+    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const employee = await employeeService.getById(id);
+      if (!employee) {
+        return reply.code(404).send({ message: 'Empleado no encontrado' });
+      }
+      return reply.code(200).send(employee);
+    },
+  );
 }
