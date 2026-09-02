@@ -10,6 +10,7 @@ import type { IBonusCalculator } from '../bonuses/bonus-calculator.interface.js'
 import type {
   CreateEmployeeDto,
   EmployeeDto,
+  EmployeeWithBonusDto,
   EmployeeWithDepartmentAndProjectsDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
@@ -32,6 +33,14 @@ export class EmployeeService implements IEmployeeService {
   async getAll(): Promise<EmployeeDto[]> {
     const employees = await this.employees.findAll();
     return employees.map((employee) => this.toEmployeeDto(employee));
+  }
+
+  async getAllWithBonus(): Promise<EmployeeWithBonusDto[]> {
+    const employees = await this.employees.findAll();
+    return employees.map((employee) => ({
+      ...this.toEmployeeDto(employee),
+      bonus: this.bonusCalculator.calculateBonus(employee),
+    }));
   }
 
   async create(data: CreateEmployeeDto): Promise<EmployeeDto> {

@@ -71,6 +71,19 @@ describe('EmployeeService', () => {
       await expect(service.getById('missing')).resolves.toBeNull();
     });
 
+    it('computes the bonus for every employee on getAllWithBonus', async () => {
+      const { service, calculator } = buildService({
+        findAll: jest.fn().mockResolvedValue([makeEmployee(), makeEmployee({ id: 'emp-2' })]),
+      });
+      calculator.calculateBonus = jest.fn().mockReturnValue(750) as never;
+
+      const result = await service.getAllWithBonus();
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ id: 'emp-1', salary: 5000, bonus: 750 });
+      expect(calculator.calculateBonus).toHaveBeenCalledTimes(2);
+    });
+
     it('returns the mapped DTO from getById when found', async () => {
       const { service } = buildService({ findById: jest.fn().mockResolvedValue(makeEmployee()) });
 

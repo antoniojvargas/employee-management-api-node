@@ -1,0 +1,24 @@
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { Roles } from '../../application/constants/roles.js';
+import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
+import { AppDataSource } from '../../infrastructure/database/data-source.js';
+import { EmployeeEntity } from '../../infrastructure/database/entities/employee.orm-entity.js';
+import { TypeOrmEmployeeRepository } from '../../infrastructure/database/repositories/employee.repository.js';
+import { EmployeeService } from '../../application/services/employee.service.js';
+
+export async function employeeRoutes(
+  fastify: FastifyInstance,
+  _options: FastifyPluginOptions,
+): Promise<void> {
+  const employees = new TypeOrmEmployeeRepository(AppDataSource.getRepository(EmployeeEntity));
+  const employeeService = new EmployeeService(employees, resolveBonusCalculator());
+
+  fastify.get(
+    '/api/employees',
+    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    async (_request, reply) => {
+      const employeesWithBonus = await employeeService.getAllWithBonus();
+      return reply.code(200).send(employeesWithBonus);
+    },
+  );
+}
