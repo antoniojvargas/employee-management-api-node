@@ -4,3 +4,4 @@ export type {
   CreateEmployeeData,
   UpdateEmployeeData,
 } from './employee-repository.interface.js';
+export { EmployeeRepositoryToken } from './employee-repository.token.js';

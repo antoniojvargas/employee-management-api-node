@@ -60,3 +60,28 @@ export const updateEmployeeDtoSchema = z
   });
 
 export type UpdateEmployeeDto = z.infer<typeof updateEmployeeDtoSchema>;
+
+const departmentDtoSchema = z.object({
+  id: z.string().uuid(),
+  name: nameSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+const projectDtoSchema = z.object({
+  id: z.string().uuid(),
+  name: nameSchema,
+  startDate: positionDateSchema,
+  endDate: positionDateSchema,
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const employeeWithDepartmentAndProjectsDtoSchema = employeeDtoSchema.extend({
+  department: departmentDtoSchema.nullable(),
+  projects: z.array(projectDtoSchema),
+});
+
+export type EmployeeWithDepartmentAndProjectsDto = z.infer<
+  typeof employeeWithDepartmentAndProjectsDtoSchema
+>;
