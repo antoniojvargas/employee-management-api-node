@@ -84,4 +84,17 @@ export async function employeeRoutes(
       return reply.code(200).send(employee);
     },
   );
+
+  fastify.delete(
+    '/api/employees/:id',
+    { preHandler: fastify.requireRole(Roles.Admin) },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const deleted = await employeeService.delete(id);
+      if (!deleted) {
+        return reply.code(404).send({ message: 'Empleado no encontrado' });
+      }
+      return reply.code(204).send();
+    },
+  );
 }
