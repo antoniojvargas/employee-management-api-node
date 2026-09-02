@@ -459,6 +459,87 @@ flowchart LR
     style layers fill:#fafafa,stroke:#bdbdbd
 ```
 
+### Patrón Strategy + Factory para bonificaciones
+
+El cálculo de bonificaciones por tipo de posición usa una combinación de **Strategy + Factory**, replicando el diseño del proyecto .NET original. Cada tipo de posición tiene su propia estrategia de cálculo y una fábrica central selecciona la estrategia correcta a partir de la posición del empleado.
+
+#### Componentes
+
+| Componente                     | Responsabilidad                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `IBonusStrategy`               | Contrato de estrategia: `positionType` + `calculateBonus(salary)`                      |
+| `RegularEmployeeBonusStrategy` | 10% del salario (posición `Regular`)                                                   |
+| `ManagerBonusStrategy`         | 20% del salario (posición `Manager`)                                                   |
+| `SeniorManagerBonusStrategy`   | 25% del salario (posición `SeniorManager`)                                             |
+| `BonusCalculatorFactory`       | Recibe las estrategias inyectadas y delega el cálculo según `employee.currentPosition` |
+| `IBonusCalculator`             | Contrato de alto nivel: `calculateBonus(employee)`                                     |
+
+Las estrategias residen en `src/application/bonuses/` y se registran en el contenedor tsyringe (`src/infrastructure/di/container.ts`), que inyecta todas las estrategias al factory:
+
+```typescript
+const strategies: IBonusStrategy[] = [
+  new RegularEmployeeBonusStrategy(),
+  new ManagerBonusStrategy(),
+  new SeniorManagerBonusStrategy(),
+];
+
+deps.register(BonusStrategiesToken, { useValue: strategies });
+deps.register(BonusCalculatorFactory, BonusCalculatorFactory);
+```
+
+#### Cómo funciona la selección
+
+El factory construye un `Map<PositionType, IBonusStrategy>` a partir de las estrategias inyectadas y, en `calculateBonus(employee)`, mapea `employee.currentPosition` (string) a su `PositionType` y delega el cálculo en la estrategia correspondiente:
+
+```typescript
+calculateBonus(employee: Employee): number {
+  const strategy = this.findStrategy(employee.currentPosition);
+  return strategy.calculateBonus(employee.salary);
+}
+```
+
+Si `currentPosition` no se corresponde con ninguna estrategia registrada, el factory lanza `BonusStrategyNotFoundError` (un error controlado de dominio) indicando la posición.
+
+#### Principio Open/Closed (abierto a extensión, cerrado a modificación)
+
+El patrón cumple el **principio Open/Closed (SOLID)**: se puede añadir un nuevo tipo de posición **sin modificar el código existente** del factory ni de las demás estrategias.
+
+Para agregar, por ejemplo, una posición `Director` con un bono del 30%:
+
+1. **Añade el valor al enum** `PositionType`:
+   ```typescript
+   export enum PositionType {
+     Regular = 1,
+     Manager = 2,
+     SeniorManager = 3,
+     Director = 4,
+   }
+   ```
+2. **Crea una nueva estrategia** que implemente `IBonusStrategy`:
+   ```typescript
+   @injectable()
+   export class DirectorBonusStrategy implements IBonusStrategy {
+     readonly positionType = PositionType.Director;
+
+     calculateBonus(salary: number): number {
+       return salary * 0.3;
+     }
+   }
+   ```
+3. **Registra la nueva estrategia** en el contenedor de DI (`container.ts`), añadiéndola al array de estrategias:
+   ```typescript
+   const strategies: IBonusStrategy[] = [
+     new RegularEmployeeBonusStrategy(),
+     new ManagerBonusStrategy(),
+     new SeniorManagerBonusStrategy(),
+     new DirectorBonusStrategy(),
+   ];
+   ```
+
+El factory y las estrategias existentes **no se tocan**: la nueva estrategia se descubre automáticamente al construir el `Map` en la fábrica. Esto mantiene el código existente estable (cerrado a modificación) y permite extender el comportamiento (abierto a extensión).
+
+> El bono también puede calcularse a través del contenedor de DI con `resolveBonusCalculator()`, que devuelve una instancia del `BonusCalculatorFactory` con todas las estrategias ya inyectadas.
+
 ### Equivalencias con la versión .NET original
 
 | Original (.NET)                     | Este proyecto (Node.js)                  |
@@ -474,4 +555,4 @@ flowchart LR
 
 ## Estado del proyecto
 
-🚧 En construcción — diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas, junto con el subsistema de autenticación y autorización (registro, login y control de acceso por roles con JWT Bearer).
+🚧 En construcción — diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas, junto con el subsistema de autenticación y autorización (registro, login y control de acceso por roles con JWT Bearer) y el cálculo de bonificaciones por tipo de posición (patrón Strategy + Factory con inyección de dependencias).
