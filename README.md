@@ -142,6 +142,162 @@ src/infrastructure/database/migrations/
 
 Cada archivo exporta una clase con `up()` (aplicar) y `down()` (revertir). Las migraciones se ejecutan en orden cronológico.
 
+## Autenticación y autorización
+
+La API usa **JWT Bearer tokens** para autenticación y **roles** para autorización, replicando el modelo de **ASP.NET Identity + JWT** del proyecto .NET original. Un token firmado enmarca la identidad del usuario (id, email) y los roles que posee, y debe enviarse en cada petición protegida mediante el encabezado `Authorization: Bearer <token>`.
+
+Existen dos roles definidos en `src/application/constants/roles.ts`:
+
+| Rol     | Descripción                                   |
+| ------- | --------------------------------------------- |
+| `Admin` | Acceso administrativo (usuarios, roles, etc.) |
+| `User`  | Rol por defecto asignado a nuevos registros   |
+
+### Endpoints
+
+| Método | Ruta                 | Requiere auth | Descripción                               |
+| ------ | -------------------- | ------------- | ----------------------------------------- |
+| `POST` | `/api/auth/register` | No            | Registra un usuario nuevo — `201`         |
+| `POST` | `/api/auth/login`    | No            | Inicia sesión y devuelve un token — `200` |
+
+### Registro
+
+Crea una cuenta. El rol `User` se asigna automáticamente al nuevo usuario.
+
+**Body** (validado con Zod):
+
+| Campo      | Validación          |
+| ---------- | ------------------- |
+| `email`    | Email válido        |
+| `password` | Mínimo 8 caracteres |
+
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"Secret123"}'
+```
+
+**Respuesta `201`:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-09-03T10:15:30.000Z"
+}
+```
+
+El flujo del servicio (`AuthService.register`) es: verificar que el email no esté en uso → buscar el rol `User` en la base de datos → hashear la contraseña con `bcrypt` (10 rondas) → crear el usuario → firmar el JWT.
+
+**Errores posibles:**
+
+| Código HTTP | Motivo                                   |
+| ----------- | ---------------------------------------- |
+| `400`       | Datos inválidos (no pasan la validación) |
+| `409`       | El email ya está registrado              |
+| `500`       | El rol por defecto no está configurado   |
+
+### Login
+
+Autentica las credenciales y devuelve los tokens de acceso.
+
+**Body** (validado con Zod):
+
+| Campo      | Validación   |
+| ---------- | ------------ |
+| `email`    | Email válido |
+| `password` | No vacío     |
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"Secret123"}'
+```
+
+**Respuesta `200`:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-09-03T10:15:30.000Z"
+}
+```
+
+El flujo del servicio (`AuthService.login`) es: buscar el usuario por email → comparar la contraseña con `bcrypt.compare` → mapear los roles del usuario → firmar el JWT.
+
+**Errores posibles:**
+
+| Código HTTP | Motivo                 |
+| ----------- | ---------------------- |
+| `400`       | Datos inválidos        |
+| `401`       | Credenciales inválidas |
+
+> Por seguridad, el login devuelve `401` tanto si el email no existe como si la contraseña es incorrecta, sin revelar cuál de los dos falló.
+
+### Uso del token
+
+Incluye el token en las peticiones a rutas protegidas:
+
+```bash
+curl http://localhost:8080/api/employees \
+  -H "Authorization: Bearer <token>"
+```
+
+El middleware (`jwt-auth.ts`) valida la firma y la expiración en cada petición protegida:
+
+| Código HTTP | Motivo                                          |
+| ----------- | ----------------------------------------------- |
+| `401`       | Token ausente, inválido, mal formado o expirado |
+| `403`       | Token válido pero rol insuficiente              |
+
+### Payload del JWT
+
+Los tokens se firman con **HS256** usando `JWT_SECRET` y expiran según `JWT_EXPIRES_IN` (configurables en `.env`).
+
+```json
+{
+  "sub": "3f0e2c8a-...",
+  "email": "user@example.com",
+  "jti": "9b2d1f4e-...",
+  "roles": ["User"],
+  "iat": 1756000000,
+  "exp": 1756086400
+}
+```
+
+| Claim   | Descripción                          |
+| ------- | ------------------------------------ |
+| `sub`   | Identificador del usuario (UUID)     |
+| `email` | Email del usuario                    |
+| `jti`   | Identificador único del token (UUID) |
+| `roles` | Roles asociados al usuario           |
+| `iat`   | Timestamp de emisión                 |
+| `exp`   | Timestamp de expiración              |
+
+### Control de acceso por rol
+
+El plugin `jwt-auth.ts` proporciona dos decoradores de Fastify para proteger rutas:
+
+- **`authenticate`** — verifica que el token Bearer sea válido. Devuelve `401` si falla.
+- **`requireRole(...roles)`** — verifica el token **y** que `request.user.roles` incluya al menos uno de los roles requeridos. Devuelve `401` si el token es inválido o `403` si el rol no es suficiente.
+
+```typescript
+// Ruta accesible solo para administradores
+fastify.post('/api/admin/users', { preHandler: [fastify.requireRole(Roles.Admin)] }, handler);
+
+// Ruta accesible para cualquier usuario autenticado
+fastify.get('/api/me', { preHandler: [fastify.authenticate] }, handler);
+```
+
+**Resumen de códigos de error de autenticación:**
+
+| Código HTTP | Significado                                             |
+| ----------- | ------------------------------------------------------- |
+| `400`       | Validación de entrada fallida (registro/login)          |
+| `401`       | Token ausente/inválido/expirado o credenciales erróneas |
+| `403`       | Token válido pero sin el rol requerido                  |
+| `409`       | Email ya registrado                                     |
+| `500`       | Rol por defecto no configurado                          |
+
 ## Database Schema
 
 El esquema de persistencia para el dominio de empleados está modelado con TypeORM. Las columnas usan `snake_case` en base de datos y `camelCase` en código; las claves primarias son UUID con `uuid_generate_v4()`; los timestamps `created_at` / `updated_at` usan `timestamptz`.
@@ -318,4 +474,4 @@ flowchart LR
 
 ## Estado del proyecto
 
-🚧 En construcción — fase de diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas.
+🚧 En construcción — diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas, junto con el subsistema de autenticación y autorización (registro, login y control de acceso por roles con JWT Bearer).
