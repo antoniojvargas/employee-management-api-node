@@ -3,7 +3,7 @@ export interface Employee {
   name: string;
   currentPosition: string;
   salary: number;
-  departmentId: string;
+  departmentId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
