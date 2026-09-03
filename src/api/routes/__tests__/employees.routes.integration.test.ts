@@ -74,6 +74,13 @@ async function insertProject(name: string): Promise<string> {
   return result[0].id;
 }
 
+async function linkEmployeeToProject(employeeId: string, projectId: string): Promise<void> {
+  await AppDataSource.query(
+    `INSERT INTO "employee_projects" ("employeesId", "projectsId") VALUES ($1, $2)`,
+    [employeeId, projectId],
+  );
+}
+
 beforeAll(async () => {
   await AppDataSource.initialize();
   await AppDataSource.runMigrations();
@@ -741,6 +748,134 @@ describe('Employee routes (integración)', () => {
       const projectId = await insertProject('API Platform');
 
       const response = await request(app.server).post(
+        `/api/employees/${emp.id}/projects/${projectId}`,
+      );
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/employees/:id/projects/:projectId', () => {
+    it('devuelve 204 y remueve la asignación', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+      await linkEmployeeToProject(emp.id, projectId);
+
+      const response = await request(app.server)
+        .delete(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(204);
+
+      const project = await AppDataSource.query(
+        `SELECT * FROM "employee_projects" WHERE "employeesId" = $1 AND "projectsId" = $2`,
+        [emp.id, projectId],
+      );
+      expect(project).toHaveLength(0);
+    });
+
+    it('devuelve 204 idempotente cuando el empleado no estaba asignado', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server)
+        .delete(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(204);
+    });
+
+    it('solo remueve la asignación del proyecto indicado', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectA = await insertProject('API Platform');
+      const projectB = await insertProject('Mobile App');
+      await linkEmployeeToProject(emp.id, projectA);
+      await linkEmployeeToProject(emp.id, projectB);
+
+      const response = await request(app.server)
+        .delete(`/api/employees/${emp.id}/projects/${projectA}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(204);
+
+      const remaining = await AppDataSource.query(
+        `SELECT * FROM "employee_projects" WHERE "employeesId" = $1`,
+        [emp.id],
+      );
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].projectsId).toBe(projectB);
+    });
+
+    it('devuelve 404 cuando el empleado no existe', async () => {
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server)
+        .delete('/api/employees/00000000-0000-0000-0000-000000000000/projects/' + projectId)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Empleado no encontrado' });
+    });
+
+    it('devuelve 404 cuando el proyecto no existe', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .delete(`/api/employees/${emp.id}/projects/00000000-0000-0000-0000-000000000000`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Proyecto no encontrado' });
+    });
+
+    it('devuelve 403 para usuario sin rol Admin', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+      await linkEmployeeToProject(emp.id, projectId);
+
+      const response = await request(app.server)
+        .delete(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(userToken));
+
+      expect(response.status).toBe(403);
+    });
+
+    it('devuelve 401 sin token de autorización', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+      await linkEmployeeToProject(emp.id, projectId);
+
+      const response = await request(app.server).delete(
         `/api/employees/${emp.id}/projects/${projectId}`,
       );
 

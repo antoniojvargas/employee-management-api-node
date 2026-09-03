@@ -14,6 +14,7 @@ import type {
   EmployeeWithPositionHistory,
   EmployeeWithRelations,
   IEmployeeRepository,
+  UnassignFromProjectResult,
   UpdateEmployeeData,
 } from '../../../application/repositories/employee-repository.interface.js';
 import { PositionHistoryEntity } from '../entities/position-history.orm-entity.js';
@@ -130,6 +131,35 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
       });
       const assigned = updated ?? employee;
       return { status: 'assigned', employee: this.toEmployeeWithRelations(assigned) };
+    });
+  }
+
+  async unassignFromProject(
+    employeeId: string,
+    projectId: string,
+  ): Promise<UnassignFromProjectResult> {
+    return this.employees.manager.transaction(async (manager) => {
+      const employees = manager.getRepository(EmployeeEntity);
+      const projects = manager.getRepository(ProjectEntity);
+
+      const employeeExists = await employees.exist({ where: { id: employeeId } });
+      if (!employeeExists) return { status: 'employee-not-found' };
+
+      const project = await projects.findOne({
+        where: { id: projectId },
+        relations: ['employees'],
+      });
+      if (!project) return { status: 'project-not-found' };
+
+      const remaining = project.employees.filter(
+        (projectEmployee) => projectEmployee.id !== employeeId,
+      );
+      if (remaining.length !== project.employees.length) {
+        project.employees = remaining;
+        await projects.save(project);
+      }
+
+      return { status: 'removed' };
     });
   }
 

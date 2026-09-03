@@ -60,6 +60,7 @@ interface MockRepository extends IEmployeeRepository {
   findByDepartmentWithProjects: jest.Mock;
   createPositionHistory: jest.Mock;
   assignToProject: jest.Mock;
+  unassignFromProject: jest.Mock;
 }
 
 function buildService(
@@ -75,6 +76,7 @@ function buildService(
     findByDepartmentWithProjects: jest.fn().mockResolvedValue([]),
     createPositionHistory: jest.fn().mockResolvedValue(null),
     assignToProject: jest.fn().mockResolvedValue({ status: 'assigned', employee: null }),
+    unassignFromProject: jest.fn().mockResolvedValue({ status: 'removed' }),
     ...repo,
   } as MockRepository;
 
@@ -488,6 +490,39 @@ describe('EmployeeService', () => {
       });
 
       await expect(service.assignToProject('emp-1', 'missing-project')).resolves.toEqual({
+        status: 'project-not-found',
+      });
+    });
+  });
+
+  describe('unassignFromProject', () => {
+    it('delega y devuelve removed en caso de éxito', async () => {
+      const { service, repository } = buildService({
+        unassignFromProject: jest.fn().mockResolvedValue({ status: 'removed' }),
+      });
+
+      const result = await service.unassignFromProject('emp-1', 'proj-1');
+
+      expect(repository.unassignFromProject).toHaveBeenCalledWith('emp-1', 'proj-1');
+      expect(result).toEqual({ status: 'removed' });
+    });
+
+    it('propaga employee-not-found cuando el empleado no existe', async () => {
+      const { service } = buildService({
+        unassignFromProject: jest.fn().mockResolvedValue({ status: 'employee-not-found' }),
+      });
+
+      await expect(service.unassignFromProject('missing', 'proj-1')).resolves.toEqual({
+        status: 'employee-not-found',
+      });
+    });
+
+    it('propaga project-not-found cuando el proyecto no existe', async () => {
+      const { service } = buildService({
+        unassignFromProject: jest.fn().mockResolvedValue({ status: 'project-not-found' }),
+      });
+
+      await expect(service.unassignFromProject('emp-1', 'missing-project')).resolves.toEqual({
         status: 'project-not-found',
       });
     });

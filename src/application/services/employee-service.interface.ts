@@ -25,6 +25,7 @@ export interface IEmployeeService {
     departmentId: string,
   ): Promise<EmployeeWithDepartmentAndProjectsDto[]>;
   assignToProject(employeeId: string, projectId: string): Promise<AssignProjectServiceResult>;
+  unassignFromProject(employeeId: string, projectId: string): Promise<UnassignProjectServiceResult>;
   calculateBonus(id: string): Promise<number>;
 }
 
@@ -32,3 +33,6 @@ export type AssignProjectServiceResult =
   | { status: 'employee-not-found' }
   | { status: 'project-not-found' }
   | { status: 'assigned'; employee: EmployeeWithDepartmentAndProjectsDto };
+
+export type UnassignProjectServiceResult =
+  { status: 'employee-not-found' } | { status: 'project-not-found' } | { status: 'removed' };

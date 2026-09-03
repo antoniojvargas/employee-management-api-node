@@ -101,6 +101,23 @@ export async function employeeRoutes(
     },
   );
 
+  fastify.delete(
+    '/api/employees/:id/projects/:projectId',
+    { preHandler: fastify.requireRole(Roles.Admin) },
+    async (request, reply) => {
+      const { id, projectId } = request.params as { id: string; projectId: string };
+
+      const result = await employeeService.unassignFromProject(id, projectId);
+      if (result.status === 'employee-not-found') {
+        return reply.code(404).send({ message: 'Empleado no encontrado' });
+      }
+      if (result.status === 'project-not-found') {
+        return reply.code(404).send({ message: 'Proyecto no encontrado' });
+      }
+      return reply.code(204).send();
+    },
+  );
+
   fastify.post(
     '/api/employees',
     { preHandler: fastify.requireRole(Roles.Admin) },

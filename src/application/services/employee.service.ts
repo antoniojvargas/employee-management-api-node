@@ -22,7 +22,11 @@ import type {
   PositionHistoryDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
-import type { AssignProjectServiceResult, IEmployeeService } from './employee-service.interface.js';
+import type {
+  AssignProjectServiceResult,
+  IEmployeeService,
+  UnassignProjectServiceResult,
+} from './employee-service.interface.js';
 import { EmployeeRepositoryToken } from '../repositories/employee-repository.token.js';
 import { BonusCalculatorToken } from '../bonuses/bonus-calculator.token.js';
 
@@ -61,6 +65,21 @@ export class EmployeeService implements IEmployeeService {
   ): Promise<AssignProjectServiceResult> {
     const result = await this.employees.assignToProject(employeeId, projectId);
     return this.toAssignProjectServiceResult(result);
+  }
+
+  async unassignFromProject(
+    employeeId: string,
+    projectId: string,
+  ): Promise<UnassignProjectServiceResult> {
+    const result = await this.employees.unassignFromProject(employeeId, projectId);
+    switch (result.status) {
+      case 'employee-not-found':
+        return { status: 'employee-not-found' };
+      case 'project-not-found':
+        return { status: 'project-not-found' };
+      case 'removed':
+        return { status: 'removed' };
+    }
   }
 
   async getAll(): Promise<EmployeeDto[]> {
