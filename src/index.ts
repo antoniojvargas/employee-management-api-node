@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import Fastify from 'fastify';
 import { jwtAuthPlugin } from './api/plugins/jwt-auth.js';
 import { authRoutes } from './api/routes/auth.routes.js';
+import { departmentRoutes } from './api/routes/departments.routes.js';
 import { employeeRoutes } from './api/routes/employees.routes.js';
 import { env } from './infrastructure/config/env.js';
 import { AppDataSource } from './infrastructure/database/data-source.js';
@@ -11,6 +12,7 @@ const app = Fastify({ logger: true });
 
 app.register(jwtAuthPlugin);
 app.register(authRoutes);
+app.register(departmentRoutes);
 app.register(employeeRoutes);
 
 app.get('/health', async (_request, reply) => {
