@@ -1,5 +1,6 @@
 import { inject, injectable } from 'tsyringe';
 import type { Employee } from '../../domain/entities/employee.js';
+import type { PositionHistory } from '../../domain/entities/position-history.js';
 import type {
   EmployeeWithPositionHistory,
   EmployeeWithRelations,
@@ -12,10 +13,12 @@ import type {
 import type { IBonusCalculator } from '../bonuses/bonus-calculator.interface.js';
 import type {
   CreateEmployeeDto,
+  CreatePositionHistoryDto,
   EmployeeDto,
   EmployeeWithBonusDto,
   EmployeeWithDepartmentAndProjectsDto,
   EmployeeWithPositionHistoryDto,
+  PositionHistoryDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
 import type { IEmployeeService } from './employee-service.interface.js';
@@ -37,6 +40,18 @@ export class EmployeeService implements IEmployeeService {
   async getByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistoryDto | null> {
     const employee = await this.employees.findByIdWithPositionHistory(id);
     return employee ? this.toEmployeeWithPositionHistoryDto(employee) : null;
+  }
+
+  async createPositionHistory(
+    employeeId: string,
+    data: CreatePositionHistoryDto,
+  ): Promise<PositionHistoryDto | null> {
+    const history = await this.employees.createPositionHistory(employeeId, {
+      position: data.position,
+      startDate: data.startDate,
+      endDate: data.endDate,
+    });
+    return history ? this.toPositionHistoryDto(history) : null;
   }
 
   async getAll(): Promise<EmployeeDto[]> {
@@ -109,6 +124,18 @@ export class EmployeeService implements IEmployeeService {
     return {
       ...this.toEmployeeDto(employee),
       positionHistory: employee.positionHistory,
+    };
+  }
+
+  private toPositionHistoryDto(history: PositionHistory): PositionHistoryDto {
+    return {
+      id: history.id,
+      employeeId: history.employeeId,
+      position: history.position,
+      startDate: history.startDate,
+      endDate: history.endDate,
+      createdAt: history.createdAt,
+      updatedAt: history.updatedAt,
     };
   }
 

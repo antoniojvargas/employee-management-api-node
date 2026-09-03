@@ -3,6 +3,7 @@ import { EmployeeService, EmployeeNotFoundError } from '../employee.service.js';
 import type { IEmployeeRepository } from '../../repositories/employee-repository.interface.js';
 import type { IBonusCalculator } from '../../bonuses/bonus-calculator.interface.js';
 import type { Employee } from '../../../domain/entities/employee.js';
+import type { PositionHistory } from '../../../domain/entities/position-history.js';
 import type { EmployeeWithRelations } from '../../repositories/employee-repository.interface.js';
 
 const makeEmployee = (overrides: Partial<Employee> = {}): Employee => ({
@@ -39,6 +40,17 @@ const makeEmployeeWithRelations = (
   ...overrides,
 });
 
+const makePositionHistory = (overrides: Partial<PositionHistory> = {}): PositionHistory => ({
+  id: 'ph-1',
+  employeeId: 'emp-1',
+  position: 'Junior',
+  startDate: new Date('2020-01-01'),
+  endDate: new Date('2026-12-31'),
+  createdAt: new Date('2026-01-01'),
+  updatedAt: new Date('2026-01-01'),
+  ...overrides,
+});
+
 interface MockRepository extends IEmployeeRepository {
   findById: jest.Mock;
   findAll: jest.Mock;
@@ -46,6 +58,7 @@ interface MockRepository extends IEmployeeRepository {
   update: jest.Mock;
   delete: jest.Mock;
   findByDepartmentWithProjects: jest.Mock;
+  createPositionHistory: jest.Mock;
 }
 
 function buildService(
@@ -59,6 +72,7 @@ function buildService(
     update: jest.fn().mockResolvedValue(null),
     delete: jest.fn().mockResolvedValue(false),
     findByDepartmentWithProjects: jest.fn().mockResolvedValue([]),
+    createPositionHistory: jest.fn().mockResolvedValue(null),
     ...repo,
   } as MockRepository;
 
@@ -387,6 +401,49 @@ describe('EmployeeService', () => {
       const result = await service.findByDepartmentWithProjects('dept-vacio');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('createPositionHistory', () => {
+    it('mapea el historial creado a PositionHistoryDto y delega con los datos normalizados', async () => {
+      const { service, repository } = buildService({
+        createPositionHistory: jest.fn().mockResolvedValue(makePositionHistory()),
+      });
+
+      const result = await service.createPositionHistory('emp-1', {
+        position: 'Junior',
+        startDate: new Date('2020-01-01'),
+        endDate: new Date('2026-12-31'),
+      });
+
+      expect(repository.createPositionHistory).toHaveBeenCalledWith('emp-1', {
+        position: 'Junior',
+        startDate: new Date('2020-01-01'),
+        endDate: new Date('2026-12-31'),
+      });
+      expect(result).toEqual({
+        id: 'ph-1',
+        employeeId: 'emp-1',
+        position: 'Junior',
+        startDate: new Date('2020-01-01'),
+        endDate: new Date('2026-12-31'),
+        createdAt: new Date('2026-01-01'),
+        updatedAt: new Date('2026-01-01'),
+      });
+    });
+
+    it('devuelve null cuando el empleado no existe', async () => {
+      const { service } = buildService({
+        createPositionHistory: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(
+        service.createPositionHistory('missing', {
+          position: 'Junior',
+          startDate: new Date('2020-01-01'),
+          endDate: new Date('2026-12-31'),
+        }),
+      ).resolves.toBeNull();
     });
   });
 

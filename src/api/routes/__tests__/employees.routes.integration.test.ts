@@ -467,4 +467,148 @@ describe('Employee routes (integración)', () => {
       expect(response.status).toBe(401);
     });
   });
+
+  describe('POST /api/employees/:id/position-history', () => {
+    it('devuelve 201 y registra la nueva posición', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken))
+        .send({
+          position: 'Senior',
+          startDate: '2026-03-01',
+          endDate: '2026-12-31',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.headers.location).toBe(`/api/employees/${emp.id}/position-history`);
+      expect(response.body).toMatchObject({
+        employeeId: emp.id,
+        position: 'Senior',
+      });
+      expect(response.body.startDate).toBeDefined();
+      expect(response.body.endDate).toBeDefined();
+    });
+
+    it('cierra la posición anterior con endDate = startDate - 1 día', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      await insertPositionHistory({
+        employeeId: emp.id,
+        position: 'Junior',
+        startDate: '2020-01-01',
+        endDate: '2026-12-31',
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken))
+        .send({
+          position: 'Senior',
+          startDate: '2026-03-01',
+          endDate: '2026-12-31',
+        });
+
+      expect(response.status).toBe(201);
+
+      const history = await request(app.server)
+        .get(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken));
+
+      expect(history.status).toBe(200);
+      expect(history.body).toHaveLength(2);
+      const closed = history.body.find((h: { position: string }) => h.position === 'Junior');
+      const newEntry = history.body.find((h: { position: string }) => h.position === 'Senior');
+
+      const expectedPreviousDay = new Date(newEntry.startDate);
+      expectedPreviousDay.setUTCDate(expectedPreviousDay.getUTCDate() - 1);
+      expect(new Date(closed.endDate).getTime()).toBe(expectedPreviousDay.getTime());
+      expect(newEntry.startDate).toBeDefined();
+    });
+
+    it('devuelve 404 cuando el empleado no existe', async () => {
+      const response = await request(app.server)
+        .post('/api/employees/00000000-0000-0000-0000-000000000000/position-history')
+        .set(authHeader(adminToken))
+        .send({ position: 'Senior', startDate: '2026-03-01', endDate: '2026-12-31' });
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Empleado no encontrado' });
+    });
+
+    it('devuelve 400 con datos inválidos', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken))
+        .send({ position: '' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual(
+        expect.objectContaining({ message: 'Datos inválidos', errors: expect.any(Object) }),
+      );
+    });
+
+    it('devuelve 400 cuando endDate es anterior a startDate', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken))
+        .send({ position: 'Senior', startDate: '2026-03-01', endDate: '2026-02-01' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Datos inválidos');
+    });
+
+    it('devuelve 403 para usuario sin rol Admin', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(userToken))
+        .send({ position: 'Senior', startDate: '2026-03-01', endDate: '2026-12-31' });
+
+      expect(response.status).toBe(403);
+    });
+
+    it('devuelve 401 sin token de autorización', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server).post(`/api/employees/${emp.id}/position-history`);
+
+      expect(response.status).toBe(401);
+    });
+  });
 });

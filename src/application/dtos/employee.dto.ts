@@ -26,6 +26,19 @@ export const positionHistoryDtoSchema = z.object({
 
 export type PositionHistoryDto = z.infer<typeof positionHistoryDtoSchema>;
 
+export const createPositionHistoryDtoSchema = z
+  .object({
+    position: nameSchema,
+    startDate: positionDateSchema,
+    endDate: positionDateSchema,
+  })
+  .refine((data) => data.startDate <= data.endDate, {
+    message: 'El endDate debe ser mayor o igual al startDate',
+    path: ['endDate'],
+  });
+
+export type CreatePositionHistoryDto = z.infer<typeof createPositionHistoryDtoSchema>;
+
 export const employeeDtoSchema = z.object({
   id: employeeIdSchema,
   name: nameSchema,

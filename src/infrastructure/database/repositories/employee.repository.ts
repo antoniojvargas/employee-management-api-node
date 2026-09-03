@@ -1,4 +1,5 @@
 import type { DeleteResult, Repository } from 'typeorm';
+import { MoreThanOrEqual } from 'typeorm';
 import { EmployeeEntity } from '../entities/employee.orm-entity.js';
 import { DepartmentEntity } from '../entities/department.orm-entity.js';
 import { ProjectEntity } from '../entities/project.orm-entity.js';
@@ -8,6 +9,7 @@ import type { PositionHistory } from '../../../domain/entities/position-history.
 import type { Project } from '../../../domain/entities/project.js';
 import type {
   CreateEmployeeData,
+  CreatePositionHistoryData,
   EmployeeWithPositionHistory,
   EmployeeWithRelations,
   IEmployeeRepository,
@@ -68,6 +70,39 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
       .getMany();
 
     return entities.map((entity) => this.toEmployeeWithRelations(entity));
+  }
+
+  async createPositionHistory(
+    employeeId: string,
+    data: CreatePositionHistoryData,
+  ): Promise<PositionHistory | null> {
+    return this.employees.manager.transaction(async (manager) => {
+      const employees = manager.getRepository(EmployeeEntity);
+      const positionHistory = manager.getRepository(PositionHistoryEntity);
+
+      const employeeExists = await employees.exist({ where: { id: employeeId } });
+      if (!employeeExists) return null;
+
+      const previousDayEnd = this.previousCalendarDay(data.startDate);
+
+      await positionHistory.update(
+        { employeeId, endDate: MoreThanOrEqual(data.startDate) },
+        { endDate: previousDayEnd },
+      );
+
+      const entity = positionHistory.create({
+        employeeId,
+        position: data.position,
+        startDate: data.startDate,
+        endDate: data.endDate,
+      });
+      const saved = await positionHistory.save(entity);
+      return this.toPositionHistory(saved);
+    });
+  }
+
+  private previousCalendarDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - 1);
   }
 
   private toEmployee(entity: EmployeeEntity): Employee {

@@ -26,6 +26,12 @@ export interface UpdateEmployeeData {
   departmentId?: string | null;
 }
 
+export interface CreatePositionHistoryData {
+  position: string;
+  startDate: Date;
+  endDate: Date;
+}
+
 export interface IEmployeeRepository {
   findById(id: string): Promise<Employee | null>;
   findByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistory | null>;
@@ -34,4 +40,8 @@ export interface IEmployeeRepository {
   update(id: string, data: UpdateEmployeeData): Promise<Employee | null>;
   delete(id: string): Promise<boolean>;
   findByDepartmentWithProjects(departmentId: string): Promise<EmployeeWithRelations[]>;
+  createPositionHistory(
+    employeeId: string,
+    data: CreatePositionHistoryData,
+  ): Promise<PositionHistory | null>;
 }
