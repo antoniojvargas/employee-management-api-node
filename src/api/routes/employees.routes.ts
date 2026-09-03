@@ -42,6 +42,19 @@ export async function employeeRoutes(
     },
   );
 
+  fastify.get(
+    '/api/employees/:id/position-history',
+    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const employee = await employeeService.getByIdWithPositionHistory(id);
+      if (!employee) {
+        return reply.code(404).send({ message: 'Empleado no encontrado' });
+      }
+      return reply.code(200).send(employee.positionHistory);
+    },
+  );
+
   fastify.post(
     '/api/employees',
     { preHandler: fastify.requireRole(Roles.Admin) },

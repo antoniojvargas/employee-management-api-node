@@ -23,6 +23,7 @@ async function createToken(roles: RoleName[]): Promise<string> {
 
 async function truncateTables(): Promise<void> {
   await AppDataSource.query('TRUNCATE TABLE "employee_projects" RESTART IDENTITY CASCADE');
+  await AppDataSource.query('TRUNCATE TABLE "position_history" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "employees" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "departments" RESTART IDENTITY CASCADE');
 }
@@ -47,6 +48,20 @@ async function insertEmployee(employee: {
     [employee.name, employee.currentPosition, employee.salary, employee.departmentId],
   );
   return { id: result[0].id, departmentId: result[0].department_id };
+}
+
+async function insertPositionHistory(history: {
+  employeeId: string;
+  position: string;
+  startDate: string;
+  endDate: string;
+}): Promise<string> {
+  const result = await AppDataSource.query(
+    `INSERT INTO "position_history" (employee_id, position, start_date, end_date)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [history.employeeId, history.position, history.startDate, history.endDate],
+  );
+  return result[0].id;
 }
 
 beforeAll(async () => {
@@ -352,6 +367,104 @@ describe('Employee routes (integración)', () => {
         .set(authHeader(userToken));
 
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe('GET /api/employees/:id/position-history', () => {
+    it('devuelve el historial de posiciones del empleado', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      await insertPositionHistory({
+        employeeId: emp.id,
+        position: 'Junior',
+        startDate: '2020-01-01',
+        endDate: '2022-01-01',
+      });
+      await insertPositionHistory({
+        employeeId: emp.id,
+        position: 'Regular',
+        startDate: '2022-01-02',
+        endDate: '2026-12-31',
+      });
+
+      const response = await request(app.server)
+        .get(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0]).toMatchObject({
+        employeeId: emp.id,
+        position: 'Junior',
+      });
+      expect(response.body[1].position).toBe('Regular');
+      expect(response.body[0].startDate).toBeDefined();
+      expect(response.body[0].endDate).toBeDefined();
+      expect(response.body[0].id).toBeDefined();
+    });
+
+    it('devuelve lista vacía cuando el empleado no tiene historial', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .get(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    });
+
+    it('devuelve 404 cuando el empleado no existe', async () => {
+      const response = await request(app.server)
+        .get('/api/employees/00000000-0000-0000-0000-000000000000/position-history')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Empleado no encontrado' });
+    });
+
+    it('permite acceso a usuarios con rol User', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      await insertPositionHistory({
+        employeeId: emp.id,
+        position: 'Junior',
+        startDate: '2020-01-01',
+        endDate: '2022-01-01',
+      });
+
+      const response = await request(app.server)
+        .get(`/api/employees/${emp.id}/position-history`)
+        .set(authHeader(userToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+    });
+
+    it('devuelve 401 sin token de autorización', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server).get(`/api/employees/${emp.id}/position-history`);
+
+      expect(response.status).toBe(401);
     });
   });
 });

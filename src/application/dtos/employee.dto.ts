@@ -86,6 +86,12 @@ export type EmployeeWithDepartmentAndProjectsDto = z.infer<
   typeof employeeWithDepartmentAndProjectsDtoSchema
 >;
 
+export const employeeWithPositionHistoryDtoSchema = employeeDtoSchema.extend({
+  positionHistory: z.array(positionHistoryDtoSchema),
+});
+
+export type EmployeeWithPositionHistoryDto = z.infer<typeof employeeWithPositionHistoryDtoSchema>;
+
 export const employeeWithBonusDtoSchema = employeeDtoSchema.extend({
   bonus: z.number(),
 });

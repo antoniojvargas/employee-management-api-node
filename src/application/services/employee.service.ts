@@ -1,6 +1,9 @@
 import { inject, injectable } from 'tsyringe';
 import type { Employee } from '../../domain/entities/employee.js';
-import type { EmployeeWithRelations } from '../repositories/employee-repository.interface.js';
+import type {
+  EmployeeWithPositionHistory,
+  EmployeeWithRelations,
+} from '../repositories/employee-repository.interface.js';
 import type {
   IEmployeeRepository,
   CreateEmployeeData,
@@ -12,6 +15,7 @@ import type {
   EmployeeDto,
   EmployeeWithBonusDto,
   EmployeeWithDepartmentAndProjectsDto,
+  EmployeeWithPositionHistoryDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
 import type { IEmployeeService } from './employee-service.interface.js';
@@ -28,6 +32,11 @@ export class EmployeeService implements IEmployeeService {
   async getById(id: string): Promise<EmployeeDto | null> {
     const employee = await this.employees.findById(id);
     return employee ? this.toEmployeeDto(employee) : null;
+  }
+
+  async getByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistoryDto | null> {
+    const employee = await this.employees.findByIdWithPositionHistory(id);
+    return employee ? this.toEmployeeWithPositionHistoryDto(employee) : null;
   }
 
   async getAll(): Promise<EmployeeDto[]> {
@@ -91,6 +100,15 @@ export class EmployeeService implements IEmployeeService {
       ...this.toEmployeeDto(employee),
       department: employee.department,
       projects: employee.projects,
+    };
+  }
+
+  private toEmployeeWithPositionHistoryDto(
+    employee: EmployeeWithPositionHistory,
+  ): EmployeeWithPositionHistoryDto {
+    return {
+      ...this.toEmployeeDto(employee),
+      positionHistory: employee.positionHistory,
     };
   }
 

@@ -4,13 +4,16 @@ import { DepartmentEntity } from '../entities/department.orm-entity.js';
 import { ProjectEntity } from '../entities/project.orm-entity.js';
 import type { Department } from '../../../domain/entities/department.js';
 import type { Employee } from '../../../domain/entities/employee.js';
+import type { PositionHistory } from '../../../domain/entities/position-history.js';
 import type { Project } from '../../../domain/entities/project.js';
 import type {
   CreateEmployeeData,
+  EmployeeWithPositionHistory,
   EmployeeWithRelations,
   IEmployeeRepository,
   UpdateEmployeeData,
 } from '../../../application/repositories/employee-repository.interface.js';
+import { PositionHistoryEntity } from '../entities/position-history.orm-entity.js';
 
 export class TypeOrmEmployeeRepository implements IEmployeeRepository {
   constructor(private readonly employees: Repository<EmployeeEntity>) {}
@@ -21,6 +24,14 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
       relations: ['positionHistory'],
     });
     return entity ? this.toEmployee(entity) : null;
+  }
+
+  async findByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistory | null> {
+    const entity = await this.employees.findOne({
+      where: { id },
+      relations: ['positionHistory'],
+    });
+    return entity ? this.toEmployeeWithPositionHistory(entity) : null;
   }
 
   async findAll(): Promise<Employee[]> {
@@ -76,6 +87,27 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
       ...this.toEmployee(entity),
       department: this.toDepartment(entity.department),
       projects: (entity.projects ?? []).map((project) => this.toProject(project)),
+    };
+  }
+
+  private toEmployeeWithPositionHistory(entity: EmployeeEntity): EmployeeWithPositionHistory {
+    return {
+      ...this.toEmployee(entity),
+      positionHistory: (entity.positionHistory ?? []).map((history) =>
+        this.toPositionHistory(history),
+      ),
+    };
+  }
+
+  private toPositionHistory(entity: PositionHistoryEntity): PositionHistory {
+    return {
+      id: entity.id,
+      employeeId: entity.employeeId,
+      position: entity.position,
+      startDate: entity.startDate,
+      endDate: entity.endDate,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
     };
   }
 
