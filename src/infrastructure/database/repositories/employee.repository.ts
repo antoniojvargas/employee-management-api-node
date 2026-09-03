@@ -48,10 +48,14 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
   }
 
   async findByDepartmentWithProjects(departmentId: string): Promise<EmployeeWithRelations[]> {
-    const entities = await this.employees.find({
-      where: { departmentId },
-      relations: ['department', 'projects', 'positionHistory'],
-    });
+    const entities = await this.employees
+      .createQueryBuilder('employee')
+      .leftJoinAndSelect('employee.department', 'department')
+      .leftJoinAndSelect('employee.projects', 'project')
+      .where('employee.departmentId = :departmentId', { departmentId })
+      .andWhere('project.id IS NOT NULL')
+      .getMany();
+
     return entities.map((entity) => this.toEmployeeWithRelations(entity));
   }
 

@@ -23,6 +23,7 @@ async function createToken(roles: RoleName[]): Promise<string> {
 
 async function truncateTables(): Promise<void> {
   await AppDataSource.query('TRUNCATE TABLE "employee_projects" RESTART IDENTITY CASCADE');
+  await AppDataSource.query('TRUNCATE TABLE "projects" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "employees" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "departments" RESTART IDENTITY CASCADE');
 }
@@ -33,6 +34,36 @@ async function insertDepartment(name: string): Promise<string> {
     [name],
   );
   return result[0].id;
+}
+
+async function insertEmployee(employee: {
+  name: string;
+  currentPosition: string;
+  salary: number;
+  departmentId: string | null;
+}): Promise<{ id: string; departmentId: string | null }> {
+  const result = await AppDataSource.query(
+    `INSERT INTO "employees" (name, current_position, salary, department_id)
+     VALUES ($1, $2, $3, $4) RETURNING id, department_id`,
+    [employee.name, employee.currentPosition, employee.salary, employee.departmentId],
+  );
+  return { id: result[0].id, departmentId: result[0].department_id };
+}
+
+async function insertProject(name: string): Promise<string> {
+  const result = await AppDataSource.query(
+    `INSERT INTO "projects" (name, start_date, end_date)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [name, '2026-02-01', '2026-12-31'],
+  );
+  return result[0].id;
+}
+
+async function linkEmployeeToProject(employeeId: string, projectId: string): Promise<void> {
+  await AppDataSource.query(
+    `INSERT INTO "employee_projects" ("employeesId", "projectsId") VALUES ($1, $2)`,
+    [employeeId, projectId],
+  );
 }
 
 beforeAll(async () => {
@@ -257,6 +288,148 @@ describe('Department routes (integración)', () => {
         .set(authHeader(userToken));
 
       expect(response.status).toBe(403);
+    });
+  });
+
+  describe('GET /api/departments/:id/employees-with-projects', () => {
+    it('devuelve solo los empleados del departamento que tienen al menos un proyecto', async () => {
+      const deptId = await insertDepartment('Engineering');
+      const projectId = await insertProject('API Platform');
+      const empWithProject = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: deptId,
+      });
+      await insertEmployee({
+        name: 'Alan Turing',
+        currentPosition: 'Junior',
+        salary: 4000,
+        departmentId: deptId,
+      });
+      await linkEmployeeToProject(empWithProject.id, projectId);
+
+      const response = await request(app.server)
+        .get(`/api/departments/${deptId}/employees-with-projects`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0]).toMatchObject({
+        id: empWithProject.id,
+        name: 'Ada Lovelace',
+        departmentId: deptId,
+      });
+      expect(response.body[0].projects).toHaveLength(1);
+      expect(response.body[0].projects[0].name).toBe('API Platform');
+      expect(response.body[0].department?.id).toBe(deptId);
+    });
+
+    it('incluye todos los proyectos de un empleado', async () => {
+      const deptId = await insertDepartment('Engineering');
+      const projectA = await insertProject('API Platform');
+      const projectB = await insertProject('Mobile App');
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: deptId,
+      });
+      await linkEmployeeToProject(emp.id, projectA);
+      await linkEmployeeToProject(emp.id, projectB);
+
+      const response = await request(app.server)
+        .get(`/api/departments/${deptId}/employees-with-projects`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].projects).toHaveLength(2);
+      const names = response.body[0].projects.map((p: { name: string }) => p.name);
+      expect(names).toEqual(expect.arrayContaining(['API Platform', 'Mobile App']));
+    });
+
+    it('no mezcla empleados de otros departamentos', async () => {
+      const deptA = await insertDepartment('Engineering');
+      const deptB = await insertDepartment('Design');
+      const projectId = await insertProject('API Platform');
+      const empInA = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: deptA,
+      });
+      const empInB = await insertEmployee({
+        name: 'Grace Hopper',
+        currentPosition: 'Senior',
+        salary: 7000,
+        departmentId: deptB,
+      });
+      await linkEmployeeToProject(empInA.id, projectId);
+      await linkEmployeeToProject(empInB.id, projectId);
+
+      const response = await request(app.server)
+        .get(`/api/departments/${deptA}/employees-with-projects`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(empInA.id);
+    });
+
+    it('devuelve lista vacía cuando no hay empleados con proyectos', async () => {
+      const deptId = await insertDepartment('Engineering');
+      await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: deptId,
+      });
+
+      const response = await request(app.server)
+        .get(`/api/departments/${deptId}/employees-with-projects`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    });
+
+    it('devuelve 404 cuando el departamento no existe', async () => {
+      const response = await request(app.server)
+        .get('/api/departments/00000000-0000-0000-0000-000000000000/employees-with-projects')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Departamento no encontrado' });
+    });
+
+    it('permite acceso a usuarios con rol User', async () => {
+      const deptId = await insertDepartment('Engineering');
+      const projectId = await insertProject('API Platform');
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: deptId,
+      });
+      await linkEmployeeToProject(emp.id, projectId);
+
+      const response = await request(app.server)
+        .get(`/api/departments/${deptId}/employees-with-projects`)
+        .set(authHeader(userToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+    });
+
+    it('devuelve 401 sin token de autorización', async () => {
+      const deptId = await insertDepartment('Engineering');
+
+      const response = await request(app.server).get(
+        `/api/departments/${deptId}/employees-with-projects`,
+      );
+
+      expect(response.status).toBe(401);
     });
   });
 });

@@ -8,9 +8,13 @@ import {
   updateDepartmentDtoSchema,
 } from '../../application/dtos/department.dto.js';
 import { DepartmentService } from '../../application/services/department.service.js';
+import { EmployeeService } from '../../application/services/employee.service.js';
 import { AppDataSource } from '../../infrastructure/database/data-source.js';
 import { DepartmentEntity } from '../../infrastructure/database/entities/department.orm-entity.js';
+import { EmployeeEntity } from '../../infrastructure/database/entities/employee.orm-entity.js';
 import { TypeOrmDepartmentRepository } from '../../infrastructure/database/repositories/department.repository.js';
+import { TypeOrmEmployeeRepository } from '../../infrastructure/database/repositories/employee.repository.js';
+import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
 
 export async function departmentRoutes(
   fastify: FastifyInstance,
@@ -20,6 +24,9 @@ export async function departmentRoutes(
     AppDataSource.getRepository(DepartmentEntity),
   );
   const departmentService = new DepartmentService(departments);
+
+  const employees = new TypeOrmEmployeeRepository(AppDataSource.getRepository(EmployeeEntity));
+  const employeeService = new EmployeeService(employees, resolveBonusCalculator());
 
   fastify.get(
     '/api/departments',
@@ -40,6 +47,21 @@ export async function departmentRoutes(
         return reply.code(404).send({ message: 'Departamento no encontrado' });
       }
       return reply.code(200).send(department);
+    },
+  );
+
+  fastify.get(
+    '/api/departments/:id/employees-with-projects',
+    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const department = await departmentService.getById(id);
+      if (!department) {
+        return reply.code(404).send({ message: 'Departamento no encontrado' });
+      }
+
+      const employees = await employeeService.findByDepartmentWithProjects(id);
+      return reply.code(200).send(employees);
     },
   );
 
