@@ -5,6 +5,8 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts'],
+  setupFiles: ['<rootDir>/src/test/setup-env.ts'],
+  testTimeout: 30_000,
   moduleNameMapper: {
     '^(\\.\\.?/.*)\\.js$': '$1',
   },
