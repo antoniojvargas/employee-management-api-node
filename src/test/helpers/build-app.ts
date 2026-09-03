@@ -4,6 +4,7 @@ import { jwtAuthPlugin } from '../../api/plugins/jwt-auth.js';
 import { authRoutes } from '../../api/routes/auth.routes.js';
 import { departmentRoutes } from '../../api/routes/departments.routes.js';
 import { employeeRoutes } from '../../api/routes/employees.routes.js';
+import { projectRoutes } from '../../api/routes/projects.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
@@ -12,6 +13,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(authRoutes);
   await app.register(departmentRoutes);
   await app.register(employeeRoutes);
+  await app.register(projectRoutes);
 
   app.get('/health', async (_request, reply) => {
     return reply.status(200).send({ status: 'ok', db: 'connected' });

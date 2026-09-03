@@ -11,3 +11,9 @@ export type {
   UpdateDepartmentData,
 } from './department-repository.interface.js';
 export { DepartmentRepositoryToken } from './department-repository.token.js';
+export type {
+  IProjectRepository,
+  CreateProjectData,
+  UpdateProjectData,
+} from './project-repository.interface.js';
+export { ProjectRepositoryToken } from './project-repository.token.js';
