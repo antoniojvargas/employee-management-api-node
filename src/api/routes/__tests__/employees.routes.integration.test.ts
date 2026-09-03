@@ -24,6 +24,7 @@ async function createToken(roles: RoleName[]): Promise<string> {
 async function truncateTables(): Promise<void> {
   await AppDataSource.query('TRUNCATE TABLE "employee_projects" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "position_history" RESTART IDENTITY CASCADE');
+  await AppDataSource.query('TRUNCATE TABLE "projects" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "employees" RESTART IDENTITY CASCADE');
   await AppDataSource.query('TRUNCATE TABLE "departments" RESTART IDENTITY CASCADE');
 }
@@ -60,6 +61,15 @@ async function insertPositionHistory(history: {
     `INSERT INTO "position_history" (employee_id, position, start_date, end_date)
      VALUES ($1, $2, $3, $4) RETURNING id`,
     [history.employeeId, history.position, history.startDate, history.endDate],
+  );
+  return result[0].id;
+}
+
+async function insertProject(name: string): Promise<string> {
+  const result = await AppDataSource.query(
+    `INSERT INTO "projects" (name, start_date, end_date)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [name, '2026-02-01', '2026-12-31'],
   );
   return result[0].id;
 }
@@ -607,6 +617,132 @@ describe('Employee routes (integración)', () => {
       });
 
       const response = await request(app.server).post(`/api/employees/${emp.id}/position-history`);
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('POST /api/employees/:id/projects/:projectId', () => {
+    it('devuelve 201 y asigna el proyecto al empleado', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(201);
+      expect(response.headers.location).toBe(`/api/projects/${projectId}`);
+      expect(response.body.id).toBe(emp.id);
+      expect(response.body.projects).toHaveLength(1);
+      expect(response.body.projects[0]).toMatchObject({
+        id: projectId,
+        name: 'API Platform',
+      });
+    });
+
+    it('devuelve 201 (idempotente) cuando el empleado ya estaba asignado al proyecto', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+
+      await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(adminToken));
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(201);
+      expect(response.body.projects).toHaveLength(1);
+    });
+
+    it('incluye los proyectos acumulados en la respuesta', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectA = await insertProject('API Platform');
+      const projectB = await insertProject('Mobile App');
+      await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectA}`)
+        .set(authHeader(adminToken));
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectB}`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(201);
+      expect(response.body.projects).toHaveLength(2);
+    });
+
+    it('devuelve 404 cuando el empleado no existe', async () => {
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server)
+        .post('/api/employees/00000000-0000-0000-0000-000000000000/projects/' + projectId)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Empleado no encontrado' });
+    });
+
+    it('devuelve 404 cuando el proyecto no existe', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/00000000-0000-0000-0000-000000000000`)
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message: 'Proyecto no encontrado' });
+    });
+
+    it('devuelve 403 para usuario sin rol Admin', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/projects/${projectId}`)
+        .set(authHeader(userToken));
+
+      expect(response.status).toBe(403);
+    });
+
+    it('devuelve 401 sin token de autorización', async () => {
+      const emp = await insertEmployee({
+        name: 'Ada Lovelace',
+        currentPosition: 'Regular',
+        salary: 5000,
+        departmentId: null,
+      });
+      const projectId = await insertProject('API Platform');
+
+      const response = await request(app.server).post(
+        `/api/employees/${emp.id}/projects/${projectId}`,
+      );
 
       expect(response.status).toBe(401);
     });

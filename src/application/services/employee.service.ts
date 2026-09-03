@@ -8,6 +8,7 @@ import type {
 import type {
   IEmployeeRepository,
   CreateEmployeeData,
+  AssignToProjectResult,
   UpdateEmployeeData,
 } from '../repositories/employee-repository.interface.js';
 import type { IBonusCalculator } from '../bonuses/bonus-calculator.interface.js';
@@ -21,7 +22,7 @@ import type {
   PositionHistoryDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
-import type { IEmployeeService } from './employee-service.interface.js';
+import type { AssignProjectServiceResult, IEmployeeService } from './employee-service.interface.js';
 import { EmployeeRepositoryToken } from '../repositories/employee-repository.token.js';
 import { BonusCalculatorToken } from '../bonuses/bonus-calculator.token.js';
 
@@ -52,6 +53,14 @@ export class EmployeeService implements IEmployeeService {
       endDate: data.endDate,
     });
     return history ? this.toPositionHistoryDto(history) : null;
+  }
+
+  async assignToProject(
+    employeeId: string,
+    projectId: string,
+  ): Promise<AssignProjectServiceResult> {
+    const result = await this.employees.assignToProject(employeeId, projectId);
+    return this.toAssignProjectServiceResult(result);
   }
 
   async getAll(): Promise<EmployeeDto[]> {
@@ -137,6 +146,17 @@ export class EmployeeService implements IEmployeeService {
       createdAt: history.createdAt,
       updatedAt: history.updatedAt,
     };
+  }
+
+  private toAssignProjectServiceResult(result: AssignToProjectResult): AssignProjectServiceResult {
+    switch (result.status) {
+      case 'employee-not-found':
+        return { status: 'employee-not-found' };
+      case 'project-not-found':
+        return { status: 'project-not-found' };
+      case 'assigned':
+        return { status: 'assigned', employee: this.toEmployeeWithRelationsDto(result.employee) };
+    }
   }
 
   private toCreateData(data: CreateEmployeeDto): CreateEmployeeData {

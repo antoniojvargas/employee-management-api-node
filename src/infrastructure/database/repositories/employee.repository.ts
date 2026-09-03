@@ -8,6 +8,7 @@ import type { Employee } from '../../../domain/entities/employee.js';
 import type { PositionHistory } from '../../../domain/entities/position-history.js';
 import type { Project } from '../../../domain/entities/project.js';
 import type {
+  AssignToProjectResult,
   CreateEmployeeData,
   CreatePositionHistoryData,
   EmployeeWithPositionHistory,
@@ -98,6 +99,37 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
       });
       const saved = await positionHistory.save(entity);
       return this.toPositionHistory(saved);
+    });
+  }
+
+  async assignToProject(employeeId: string, projectId: string): Promise<AssignToProjectResult> {
+    return this.employees.manager.transaction(async (manager) => {
+      const employees = manager.getRepository(EmployeeEntity);
+      const projects = manager.getRepository(ProjectEntity);
+
+      const employee = await employees.findOne({ where: { id: employeeId } });
+      if (!employee) return { status: 'employee-not-found' };
+
+      const project = await projects.findOne({
+        where: { id: projectId },
+        relations: ['employees'],
+      });
+      if (!project) return { status: 'project-not-found' };
+
+      const alreadyAssigned = project.employees.some(
+        (projectEmployee) => projectEmployee.id === employeeId,
+      );
+      if (!alreadyAssigned) {
+        project.employees.push(employee);
+        await projects.save(project);
+      }
+
+      const updated = await employees.findOne({
+        where: { id: employeeId },
+        relations: ['department', 'projects', 'positionHistory'],
+      });
+      const assigned = updated ?? employee;
+      return { status: 'assigned', employee: this.toEmployeeWithRelations(assigned) };
     });
   }
 

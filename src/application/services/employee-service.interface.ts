@@ -24,5 +24,11 @@ export interface IEmployeeService {
   findByDepartmentWithProjects(
     departmentId: string,
   ): Promise<EmployeeWithDepartmentAndProjectsDto[]>;
+  assignToProject(employeeId: string, projectId: string): Promise<AssignProjectServiceResult>;
   calculateBonus(id: string): Promise<number>;
 }
+
+export type AssignProjectServiceResult =
+  | { status: 'employee-not-found' }
+  | { status: 'project-not-found' }
+  | { status: 'assigned'; employee: EmployeeWithDepartmentAndProjectsDto };

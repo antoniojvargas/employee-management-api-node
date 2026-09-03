@@ -32,6 +32,11 @@ export interface CreatePositionHistoryData {
   endDate: Date;
 }
 
+export type AssignToProjectResult =
+  | { status: 'employee-not-found' }
+  | { status: 'project-not-found' }
+  | { status: 'assigned'; employee: EmployeeWithRelations };
+
 export interface IEmployeeRepository {
   findById(id: string): Promise<Employee | null>;
   findByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistory | null>;
@@ -44,4 +49,5 @@ export interface IEmployeeRepository {
     employeeId: string,
     data: CreatePositionHistoryData,
   ): Promise<PositionHistory | null>;
+  assignToProject(employeeId: string, projectId: string): Promise<AssignToProjectResult>;
 }

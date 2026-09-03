@@ -59,6 +59,7 @@ interface MockRepository extends IEmployeeRepository {
   delete: jest.Mock;
   findByDepartmentWithProjects: jest.Mock;
   createPositionHistory: jest.Mock;
+  assignToProject: jest.Mock;
 }
 
 function buildService(
@@ -73,6 +74,7 @@ function buildService(
     delete: jest.fn().mockResolvedValue(false),
     findByDepartmentWithProjects: jest.fn().mockResolvedValue([]),
     createPositionHistory: jest.fn().mockResolvedValue(null),
+    assignToProject: jest.fn().mockResolvedValue({ status: 'assigned', employee: null }),
     ...repo,
   } as MockRepository;
 
@@ -444,6 +446,50 @@ describe('EmployeeService', () => {
           endDate: new Date('2026-12-31'),
         }),
       ).resolves.toBeNull();
+    });
+  });
+
+  describe('assignToProject', () => {
+    it('mapea el empleado asignado a EmployeeWithDepartmentAndProjectsDto', async () => {
+      const { service, repository } = buildService({
+        assignToProject: jest.fn().mockResolvedValue({
+          status: 'assigned',
+          employee: makeEmployeeWithRelations(),
+        }),
+      });
+
+      const result = await service.assignToProject('emp-1', 'proj-1');
+
+      expect(repository.assignToProject).toHaveBeenCalledWith('emp-1', 'proj-1');
+      expect(result).toEqual({
+        status: 'assigned',
+        employee: expect.objectContaining({
+          id: 'emp-1',
+          name: 'Ada Lovelace',
+          department: expect.objectContaining({ id: 'dept-1' }),
+          projects: [expect.objectContaining({ id: 'proj-1' })],
+        }),
+      });
+    });
+
+    it('propaga employee-not-found cuando el empleado no existe', async () => {
+      const { service } = buildService({
+        assignToProject: jest.fn().mockResolvedValue({ status: 'employee-not-found' }),
+      });
+
+      await expect(service.assignToProject('missing', 'proj-1')).resolves.toEqual({
+        status: 'employee-not-found',
+      });
+    });
+
+    it('propaga project-not-found cuando el proyecto no existe', async () => {
+      const { service } = buildService({
+        assignToProject: jest.fn().mockResolvedValue({ status: 'project-not-found' }),
+      });
+
+      await expect(service.assignToProject('emp-1', 'missing-project')).resolves.toEqual({
+        status: 'project-not-found',
+      });
     });
   });
 
