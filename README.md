@@ -298,6 +298,54 @@ fastify.get('/api/me', { preHandler: [fastify.authenticate] }, handler);
 | `409`       | Email ya registrado                                     |
 | `500`       | Rol por defecto no configurado                          |
 
+## Endpoints
+
+Tabla completa de los endpoints expuestos por la API. La columna **Rol** indica el rol requerido para acceder a la ruta; las rutas de lectura (`GET`) admiten `Admin` y `User`, las de escritura (`POST`, `PUT`, `DELETE`) solo `Admin`, y las de autenticación no requieren token.
+
+### Autenticación
+
+| Método | Ruta                 | Rol     | Descripción                               |
+| ------ | -------------------- | ------- | ----------------------------------------- |
+| `POST` | `/api/auth/register` | Ninguno | Registra un usuario nuevo — `201`         |
+| `POST` | `/api/auth/login`    | Ninguno | Inicia sesión y devuelve un token — `200` |
+
+### Empleados
+
+| Método   | Ruta                                     | Rol             | Descripción                                                |
+| -------- | ---------------------------------------- | --------------- | ---------------------------------------------------------- |
+| `GET`    | `/api/employees`                         | `Admin`, `User` | Lista empleados con su bonificación — `200`                |
+| `GET`    | `/api/employees/:id`                     | `Admin`, `User` | Obtiene un empleado por id — `200`                         |
+| `GET`    | `/api/employees/:id/position-history`    | `Admin`, `User` | Historial de posiciones del empleado — `200`               |
+| `POST`   | `/api/employees/:id/position-history`    | `Admin`         | Registra una posición y cierra la anterior — `201` / `400` |
+| `POST`   | `/api/employees`                         | `Admin`         | Crea un empleado — `201` / `400`                           |
+| `PUT`    | `/api/employees/:id`                     | `Admin`         | Actualiza un empleado — `200` / `400`                      |
+| `DELETE` | `/api/employees/:id`                     | `Admin`         | Elimina un empleado — `204` / `404`                        |
+| `POST`   | `/api/employees/:id/projects/:projectId` | `Admin`         | Asigna un empleado a un proyecto — `201` / `404`           |
+| `DELETE` | `/api/employees/:id/projects/:projectId` | `Admin`         | Desasigna un empleado de un proyecto — `204` / `404`       |
+
+### Departamentos
+
+| Método   | Ruta                                           | Rol             | Descripción                                          |
+| -------- | ---------------------------------------------- | --------------- | ---------------------------------------------------- |
+| `GET`    | `/api/departments`                             | `Admin`, `User` | Lista departamentos — `200`                          |
+| `GET`    | `/api/departments/:id`                         | `Admin`, `User` | Obtiene un departamento por id — `200`               |
+| `GET`    | `/api/departments/:id/employees-with-projects` | `Admin`, `User` | Empleados del departamento con sus proyectos — `200` |
+| `POST`   | `/api/departments`                             | `Admin`         | Crea un departamento — `201` / `400`                 |
+| `PUT`    | `/api/departments/:id`                         | `Admin`         | Actualiza un departamento — `200` / `400`            |
+| `DELETE` | `/api/departments/:id`                         | `Admin`         | Elimina un departamento — `204` / `404`              |
+
+### Proyectos
+
+| Método   | Ruta                | Rol             | Descripción                           |
+| -------- | ------------------- | --------------- | ------------------------------------- |
+| `GET`    | `/api/projects`     | `Admin`, `User` | Lista proyectos — `200`               |
+| `GET`    | `/api/projects/:id` | `Admin`, `User` | Obtiene un proyecto por id — `200`    |
+| `POST`   | `/api/projects`     | `Admin`         | Crea un proyecto — `201` / `400`      |
+| `PUT`    | `/api/projects/:id` | `Admin`         | Actualiza un proyecto — `200` / `400` |
+| `DELETE` | `/api/projects/:id` | `Admin`         | Elimina un proyecto — `204` / `404`   |
+
+> Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>` (ver [Autenticación y autorización](#autenticación-y-autorización)). Devuelven `401` si el token falta o es inválido y `403` si el token es válido pero el rol es insuficiente.
+
 ## Database Schema
 
 El esquema de persistencia para el dominio de empleados está modelado con TypeORM. Las columnas usan `snake_case` en base de datos y `camelCase` en código; las claves primarias son UUID con `uuid_generate_v4()`; los timestamps `created_at` / `updated_at` usan `timestamptz`.
