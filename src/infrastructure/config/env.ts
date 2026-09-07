@@ -6,6 +6,8 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   PORT: z.coerce.number().default(3000),
   CORS_ORIGINS: z.string().default(''),
+  DEFAULT_PAGE_SIZE: z.coerce.number().int().min(1).default(10),
+  MAX_PAGE_SIZE: z.coerce.number().int().min(1).default(100),
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number(),
   DB_USER: z.string().min(1),

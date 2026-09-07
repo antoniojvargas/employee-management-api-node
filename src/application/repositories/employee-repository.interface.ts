@@ -2,6 +2,7 @@ import type { Department } from '../../domain/entities/department.js';
 import type { Employee } from '../../domain/entities/employee.js';
 import type { PositionHistory } from '../../domain/entities/position-history.js';
 import type { Project } from '../../domain/entities/project.js';
+import type { PaginatedItems, PaginationParams } from '../types/pagination.js';
 
 export interface EmployeeWithRelations extends Employee {
   department: Department | null;
@@ -44,6 +45,7 @@ export interface IEmployeeRepository {
   findById(id: string): Promise<Employee | null>;
   findByIdWithPositionHistory(id: string): Promise<EmployeeWithPositionHistory | null>;
   findAll(): Promise<Employee[]>;
+  findAllPaginated(params: PaginationParams): Promise<PaginatedItems<Employee>>;
   create(data: CreateEmployeeData): Promise<Employee>;
   update(id: string, data: UpdateEmployeeData): Promise<Employee | null>;
   delete(id: string): Promise<boolean>;

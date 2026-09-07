@@ -122,8 +122,9 @@ describe('Employee routes (integración)', () => {
       const response = await request(app.server).get('/api/employees').set(authHeader(adminToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveLength(2);
-      const ada = response.body.find((e: { name: string }) => e.name === 'Ada Lovelace');
+      expect(response.body.pagination).toEqual({ page: 1, pageSize: 10, total: 2, totalPages: 1 });
+      expect(response.body.data).toHaveLength(2);
+      const ada = response.body.data.find((e: { name: string }) => e.name === 'Ada Lovelace');
       expect(ada).toMatchObject({
         name: 'Ada Lovelace',
         currentPosition: 'Manager',
@@ -139,7 +140,8 @@ describe('Employee routes (integración)', () => {
       const response = await request(app.server).get('/api/employees').set(authHeader(adminToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual([]);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination).toEqual({ page: 1, pageSize: 10, total: 0, totalPages: 0 });
     });
 
     it('permite acceso a usuarios con rol User', async () => {
@@ -154,7 +156,35 @@ describe('Employee routes (integración)', () => {
       const response = await request(app.server).get('/api/employees').set(authHeader(userToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveLength(1);
+      expect(response.body.data).toHaveLength(1);
+    });
+
+    it('devuelve 200 y pagina con page/pageSize', async () => {
+      for (const name of ['Ada', 'Alan', 'Grace']) {
+        await insertEmployee({
+          name,
+          currentPosition: 'Regular',
+          salary: 5000,
+          departmentId: null,
+        });
+      }
+
+      const response = await request(app.server)
+        .get('/api/employees?page=2&pageSize=2')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination).toEqual({ page: 2, pageSize: 2, total: 3, totalPages: 2 });
+      expect(response.body.data).toHaveLength(1);
+    });
+
+    it('devuelve 400 cuando page o pageSize no son enteros positivos', async () => {
+      const response = await request(app.server)
+        .get('/api/employees?page=abc')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Datos inválidos');
     });
 
     it('devuelve 401 sin token de autorización', async () => {

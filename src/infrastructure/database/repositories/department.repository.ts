@@ -6,6 +6,7 @@ import type {
   IDepartmentRepository,
   UpdateDepartmentData,
 } from '../../../application/repositories/department-repository.interface.js';
+import type { PaginatedItems, PaginationParams } from '../../../application/types/pagination.js';
 
 export class TypeOrmDepartmentRepository implements IDepartmentRepository {
   constructor(private readonly departments: Repository<DepartmentEntity>) {}
@@ -18,6 +19,18 @@ export class TypeOrmDepartmentRepository implements IDepartmentRepository {
   async findAll(): Promise<Department[]> {
     const entities = await this.departments.find();
     return entities.map((entity) => this.toDepartment(entity));
+  }
+
+  async findAllPaginated(params: PaginationParams): Promise<PaginatedItems<Department>> {
+    const [entities, total] = await this.departments.findAndCount({
+      order: { createdAt: 'ASC', id: 'ASC' },
+      skip: (params.page - 1) * params.pageSize,
+      take: params.pageSize,
+    });
+    return {
+      items: entities.map((entity) => this.toDepartment(entity)),
+      total,
+    };
   }
 
   async create(data: CreateDepartmentData): Promise<Department> {

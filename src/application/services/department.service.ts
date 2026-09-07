@@ -10,6 +10,11 @@ import type {
   DepartmentDto,
   UpdateDepartmentDto,
 } from '../dtos/department.dto.js';
+import {
+  buildPaginatedResult,
+  type PaginatedResult,
+  type PaginationParams,
+} from '../types/pagination.js';
 import type { IDepartmentService } from './department-service.interface.js';
 import { DepartmentRepositoryToken } from '../repositories/department-repository.token.js';
 
@@ -27,6 +32,16 @@ export class DepartmentService implements IDepartmentService {
   async getAll(): Promise<DepartmentDto[]> {
     const departments = await this.departments.findAll();
     return departments.map((department) => this.toDepartmentDto(department));
+  }
+
+  async getAllPaged(params: PaginationParams): Promise<PaginatedResult<DepartmentDto>> {
+    const { items, total } = await this.departments.findAllPaginated(params);
+    return buildPaginatedResult(
+      items.map((department) => this.toDepartmentDto(department)),
+      total,
+      params.page,
+      params.pageSize,
+    );
   }
 
   async create(data: CreateDepartmentDto): Promise<DepartmentDto> {

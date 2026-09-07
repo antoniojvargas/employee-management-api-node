@@ -20,6 +20,8 @@ import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
 import {
   idParamsSchema,
   messageErrorResponseSchema,
+  paginatedResponseSchema,
+  paginationQuerySchema,
   toJsonSchema,
 } from '../schemas/json-schema.js';
 
@@ -36,7 +38,8 @@ export async function departmentRoutes(
   const employeeService = new EmployeeService(employees, resolveBonusCalculator());
 
   const departmentResponseSchema = toJsonSchema(departmentDtoSchema);
-  const departmentsListResponseSchema = toJsonSchema(z.array(departmentDtoSchema));
+  const departmentItemSchema = toJsonSchema(departmentDtoSchema);
+  const departmentsPaginatedSchema = paginatedResponseSchema(departmentItemSchema);
   const employeesWithProjectsResponseSchema = toJsonSchema(
     z.array(employeeWithDepartmentAndProjectsDtoSchema),
   );
@@ -51,11 +54,12 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Departamentos'],
-        response: { 200: departmentsListResponseSchema },
+        querystring: paginationQuerySchema(),
+        response: { 200: departmentsPaginatedSchema },
       },
     },
-    async (_request, reply) => {
-      const allDepartments = await departmentService.getAll();
+    async (request, reply) => {
+      const allDepartments = await departmentService.getAllPaged(request.pagination);
       return reply.code(200).send(allDepartments);
     },
   );

@@ -27,6 +27,11 @@ import type {
   IEmployeeService,
   UnassignProjectServiceResult,
 } from './employee-service.interface.js';
+import {
+  buildPaginatedResult,
+  type PaginatedResult,
+  type PaginationParams,
+} from '../types/pagination.js';
 import { EmployeeRepositoryToken } from '../repositories/employee-repository.token.js';
 import { BonusCalculatorToken } from '../bonuses/bonus-calculator.token.js';
 
@@ -93,6 +98,21 @@ export class EmployeeService implements IEmployeeService {
       ...this.toEmployeeDto(employee),
       bonus: this.bonusCalculator.calculateBonus(employee),
     }));
+  }
+
+  async getAllWithBonusPaged(
+    params: PaginationParams,
+  ): Promise<PaginatedResult<EmployeeWithBonusDto>> {
+    const { items, total } = await this.employees.findAllPaginated(params);
+    return buildPaginatedResult(
+      items.map((employee) => ({
+        ...this.toEmployeeDto(employee),
+        bonus: this.bonusCalculator.calculateBonus(employee),
+      })),
+      total,
+      params.page,
+      params.pageSize,
+    );
   }
 
   async create(data: CreateEmployeeDto): Promise<EmployeeDto> {

@@ -17,6 +17,7 @@ import type {
   UnassignFromProjectResult,
   UpdateEmployeeData,
 } from '../../../application/repositories/employee-repository.interface.js';
+import type { PaginatedItems, PaginationParams } from '../../../application/types/pagination.js';
 import { PositionHistoryEntity } from '../entities/position-history.orm-entity.js';
 
 export class TypeOrmEmployeeRepository implements IEmployeeRepository {
@@ -41,6 +42,19 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
   async findAll(): Promise<Employee[]> {
     const entities = await this.employees.find({ relations: ['positionHistory'] });
     return entities.map((entity) => this.toEmployee(entity));
+  }
+
+  async findAllPaginated(params: PaginationParams): Promise<PaginatedItems<Employee>> {
+    const [entities, total] = await this.employees.findAndCount({
+      relations: ['positionHistory'],
+      order: { createdAt: 'ASC', id: 'ASC' },
+      skip: (params.page - 1) * params.pageSize,
+      take: params.pageSize,
+    });
+    return {
+      items: entities.map((entity) => this.toEmployee(entity)),
+      total,
+    };
   }
 
   async create(data: CreateEmployeeData): Promise<Employee> {

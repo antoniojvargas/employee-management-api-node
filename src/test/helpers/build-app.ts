@@ -7,6 +7,7 @@ import { errorHandlerPlugin } from '../../api/plugins/error-handler.plugin.js';
 import { rateLimitPlugin } from '../../api/plugins/rate-limit.plugin.js';
 import { securityHeadersPlugin } from '../../api/plugins/security-headers.plugin.js';
 import { swaggerPlugin } from '../../api/plugins/swagger.plugin.js';
+import { paginationPlugin } from '../../api/plugins/pagination.plugin.js';
 import { dateTimeFormat } from '../../api/schemas/json-schema.js';
 import { authRoutes } from '../../api/routes/auth.routes.js';
 import { departmentRoutes } from '../../api/routes/departments.routes.js';
@@ -23,6 +24,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(errorHandlerPlugin);
   await app.register(securityHeadersPlugin);
   await app.register(swaggerPlugin);
+  await app.register(paginationPlugin);
   await app.register(authRoutes);
   await app.register(departmentRoutes);
   await app.register(employeeRoutes);

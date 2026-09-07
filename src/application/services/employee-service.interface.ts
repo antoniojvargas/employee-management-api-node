@@ -8,6 +8,7 @@ import type {
   PositionHistoryDto,
   UpdateEmployeeDto,
 } from '../dtos/employee.dto.js';
+import type { PaginatedResult, PaginationParams } from '../types/pagination.js';
 
 export interface IEmployeeService {
   getById(id: string): Promise<EmployeeDto | null>;
@@ -18,6 +19,7 @@ export interface IEmployeeService {
   ): Promise<PositionHistoryDto | null>;
   getAll(): Promise<EmployeeDto[]>;
   getAllWithBonus(): Promise<EmployeeWithBonusDto[]>;
+  getAllWithBonusPaged(params: PaginationParams): Promise<PaginatedResult<EmployeeWithBonusDto>>;
   create(data: CreateEmployeeDto): Promise<EmployeeDto>;
   update(id: string, data: UpdateEmployeeDto): Promise<EmployeeDto | null>;
   delete(id: string): Promise<boolean>;

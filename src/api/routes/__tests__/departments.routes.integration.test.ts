@@ -98,8 +98,9 @@ describe('Department routes (integración)', () => {
         .set(authHeader(adminToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveLength(2);
-      const names = response.body.map((d: { name: string }) => d.name);
+      expect(response.body.pagination).toEqual({ page: 1, pageSize: 10, total: 2, totalPages: 1 });
+      expect(response.body.data).toHaveLength(2);
+      const names = response.body.data.map((d: { name: string }) => d.name);
       expect(names).toEqual(expect.arrayContaining(['Engineering', 'Design']));
     });
 
@@ -109,7 +110,8 @@ describe('Department routes (integración)', () => {
         .set(authHeader(adminToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual([]);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination).toEqual({ page: 1, pageSize: 10, total: 0, totalPages: 0 });
     });
 
     it('permite acceso a usuarios con rol User', async () => {
@@ -118,7 +120,30 @@ describe('Department routes (integración)', () => {
       const response = await request(app.server).get('/api/departments').set(authHeader(userToken));
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveLength(1);
+      expect(response.body.data).toHaveLength(1);
+    });
+
+    it('devuelve 200 y pagina con page/pageSize', async () => {
+      await insertDepartment('Engineering');
+      await insertDepartment('Design');
+      await insertDepartment('Marketing');
+
+      const response = await request(app.server)
+        .get('/api/departments?page=3&pageSize=1')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination).toEqual({ page: 3, pageSize: 1, total: 3, totalPages: 3 });
+      expect(response.body.data).toHaveLength(1);
+    });
+
+    it('devuelve 400 cuando page o pageSize no son enteros positivos', async () => {
+      const response = await request(app.server)
+        .get('/api/departments?pageSize=0')
+        .set(authHeader(adminToken));
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Datos inválidos');
     });
 
     it('devuelve 401 sin token de autorización', async () => {

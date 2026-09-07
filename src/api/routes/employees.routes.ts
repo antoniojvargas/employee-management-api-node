@@ -23,6 +23,8 @@ import {
   idAndProjectIdParamsSchema,
   idParamsSchema,
   messageErrorResponseSchema,
+  paginatedResponseSchema,
+  paginationQuerySchema,
   toJsonSchema,
 } from '../schemas/json-schema.js';
 
@@ -34,7 +36,8 @@ export async function employeeRoutes(
   const employeeService = new EmployeeService(employees, resolveBonusCalculator());
 
   const employeeResponseSchema = toJsonSchema(employeeDtoSchema);
-  const employeesWithBonusResponseSchema = toJsonSchema(z.array(employeeWithBonusDtoSchema));
+  const employeeWithBonusItemSchema = toJsonSchema(employeeWithBonusDtoSchema);
+  const employeesWithBonusPaginatedSchema = paginatedResponseSchema(employeeWithBonusItemSchema);
   const positionHistoryListResponseSchema = toJsonSchema(z.array(positionHistoryDtoSchema));
   const positionHistoryResponseSchema = toJsonSchema(positionHistoryDtoSchema);
   const employeeWithDepartmentAndProjectsResponseSchema = toJsonSchema(
@@ -52,11 +55,12 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Empleados'],
-        response: { 200: employeesWithBonusResponseSchema },
+        querystring: paginationQuerySchema(),
+        response: { 200: employeesWithBonusPaginatedSchema },
       },
     },
-    async (_request, reply) => {
-      const employeesWithBonus = await employeeService.getAllWithBonus();
+    async (request, reply) => {
+      const employeesWithBonus = await employeeService.getAllWithBonusPaged(request.pagination);
       return reply.code(200).send(employeesWithBonus);
     },
   );
