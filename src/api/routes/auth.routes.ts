@@ -12,6 +12,7 @@ import { UserEntity } from '../../infrastructure/database/entities/user.orm-enti
 import { TypeOrmUserRepository } from '../../infrastructure/database/repositories/user.repository.js';
 import { AuthService, type AuthError } from '../../infrastructure/auth/auth.service.js';
 import { JwtTokenService } from '../../infrastructure/auth/jwt-token.service.js';
+import { loginRateLimitConfig } from '../plugins/rate-limit.plugin.js';
 
 function authErrorResponse(error: AuthError): { statusCode: number; message: string } {
   switch (error.code) {
@@ -56,22 +57,26 @@ export async function authRoutes(
     return reply.code(201).send(result.data);
   });
 
-  fastify.post('/api/auth/login', async (request, reply) => {
-    let input: LoginDto;
-    try {
-      input = loginDtoSchema.parse(request.body);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
+  fastify.post(
+    '/api/auth/login',
+    { config: { rateLimit: loginRateLimitConfig } },
+    async (request, reply) => {
+      let input: LoginDto;
+      try {
+        input = loginDtoSchema.parse(request.body);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
+        }
+        throw err;
       }
-      throw err;
-    }
 
-    const result = await authService.login(input);
-    if (!result.ok) {
-      const { statusCode, message } = authErrorResponse(result.error);
-      return reply.code(statusCode).send({ message });
-    }
-    return reply.code(200).send(result.data);
-  });
+      const result = await authService.login(input);
+      if (!result.ok) {
+        const { statusCode, message } = authErrorResponse(result.error);
+        return reply.code(statusCode).send({ message });
+      }
+      return reply.code(200).send(result.data);
+    },
+  );
 }

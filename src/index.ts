@@ -4,6 +4,7 @@ import { corsPlugin } from './api/plugins/cors.plugin.js';
 import { jwtAuthPlugin } from './api/plugins/jwt-auth.js';
 import { requestLoggingPlugin } from './api/plugins/request-logging.plugin.js';
 import { errorHandlerPlugin } from './api/plugins/error-handler.plugin.js';
+import { rateLimitPlugin } from './api/plugins/rate-limit.plugin.js';
 import { securityHeadersPlugin } from './api/plugins/security-headers.plugin.js';
 import { authRoutes } from './api/routes/auth.routes.js';
 import { departmentRoutes } from './api/routes/departments.routes.js';
@@ -17,6 +18,7 @@ import { migrateAndSeed } from './infrastructure/database/migrate-and-seed.js';
 const app = Fastify({ logger: buildLoggerOptions() });
 
 app.register(corsPlugin);
+app.register(rateLimitPlugin);
 app.register(jwtAuthPlugin);
 app.register(requestLoggingPlugin);
 app.register(errorHandlerPlugin);
