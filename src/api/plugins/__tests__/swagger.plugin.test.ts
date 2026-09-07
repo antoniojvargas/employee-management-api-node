@@ -15,6 +15,7 @@ async function buildTestApp(): Promise<FastifyInstance> {
     {
       schema: {
         tags: ['Trabajos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: { 200: jobResponseSchema },
       },
@@ -90,7 +91,22 @@ describe('Swagger', () => {
     expect(response.body.components.securitySchemes.bearerAuth).toMatchObject({
       type: 'http',
       scheme: 'bearer',
+      bearerFormat: 'JWT',
     });
+  });
+
+  it('aplica bearerAuth como requisito de seguridad a las operaciones protegidas', async () => {
+    const response = await request(app.server).get('/docs/json');
+    const getJob = response.body.paths['/jobs/{id}'].get;
+
+    expect(getJob.security).toEqual([{ bearerAuth: [] }]);
+  });
+
+  it('no exige autenticación en rutas públicas', async () => {
+    const response = await request(app.server).get('/docs/json');
+    const postJob = response.body.paths['/jobs'].post;
+
+    expect(postJob.security).toBeUndefined();
   });
 
   it('sirve la interfaz Swagger UI en /docs', async () => {

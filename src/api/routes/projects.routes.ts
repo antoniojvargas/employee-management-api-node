@@ -38,6 +38,7 @@ export async function projectRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Proyectos'],
+        security: [{ bearerAuth: [] }],
         response: { 200: projectsListResponseSchema },
       },
     },
@@ -53,6 +54,7 @@ export async function projectRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Proyectos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: {
           200: projectResponseSchema,
@@ -76,6 +78,7 @@ export async function projectRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Proyectos'],
+        security: [{ bearerAuth: [] }],
         body: toJsonSchema(createProjectDtoSchema),
         response: { 201: projectResponseSchema },
       },
@@ -98,6 +101,7 @@ export async function projectRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Proyectos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         body: updateProjectBodySchema,
         response: {
@@ -126,6 +130,7 @@ export async function projectRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Proyectos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
       },
     },

@@ -55,6 +55,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         querystring: paginationQuerySchema(),
         response: { 200: employeesWithBonusPaginatedSchema },
       },
@@ -71,6 +72,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: {
           200: employeeResponseSchema,
@@ -94,6 +96,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: {
           200: positionHistoryListResponseSchema,
@@ -117,6 +120,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         body: createPositionHistoryBodySchema,
         response: {
@@ -155,6 +159,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idAndProjectIdParamsSchema,
         response: {
           201: employeeWithDepartmentAndProjectsResponseSchema,
@@ -182,6 +187,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idAndProjectIdParamsSchema,
       },
     },
@@ -205,6 +211,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         body: toJsonSchema(createEmployeeDtoSchema),
         response: { 201: employeeResponseSchema },
       },
@@ -222,6 +229,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         body: updateEmployeeBodySchema,
         response: {
@@ -247,6 +255,7 @@ export async function employeeRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Empleados'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
       },
     },

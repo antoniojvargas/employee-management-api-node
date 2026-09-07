@@ -54,6 +54,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         querystring: paginationQuerySchema(),
         response: { 200: departmentsPaginatedSchema },
       },
@@ -70,6 +71,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: {
           200: departmentResponseSchema,
@@ -93,6 +95,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin, Roles.User),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         response: {
           200: employeesWithProjectsResponseSchema,
@@ -118,6 +121,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         body: toJsonSchema(createDepartmentDtoSchema),
         response: { 201: departmentResponseSchema },
       },
@@ -138,6 +142,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
         body: updateDepartmentBodySchema,
         response: {
@@ -163,6 +168,7 @@ export async function departmentRoutes(
       preHandler: fastify.requireRole(Roles.Admin),
       schema: {
         tags: ['Departamentos'],
+        security: [{ bearerAuth: [] }],
         params: idParamsSchema,
       },
     },
