@@ -26,18 +26,19 @@ Las variables de entorno del proyecto están documentadas en `.env.example`. Par
 cp .env.example .env
 ```
 
-| Variable         | Descripción                                         |
-| ---------------- | --------------------------------------------------- |
-| `NODE_ENV`       | Entorno de ejecución (`development`, `production`)  |
-| `LOG_LEVEL`      | Nivel de logs de Pino (`info`, `debug`, `error`, …) |
-| `PORT`           | Puerto HTTP de la API                               |
-| `DB_HOST`        | Host de PostgreSQL                                  |
-| `DB_PORT`        | Puerto de PostgreSQL                                |
-| `DB_USER`        | Usuario de la base de datos                         |
-| `DB_PASSWORD`    | Contraseña de la base de datos                      |
-| `DB_NAME`        | Nombre de la base de datos                          |
-| `JWT_SECRET`     | Secreto para firmar los tokens JWT                  |
-| `JWT_EXPIRES_IN` | Expiración de los tokens JWT (ej. `1d`, `12h`)      |
+| Variable         | Descripción                                                                    |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `NODE_ENV`       | Entorno de ejecución (`development`, `production`)                             |
+| `LOG_LEVEL`      | Nivel de logs de Pino (`info`, `debug`, `error`, …)                            |
+| `PORT`           | Puerto HTTP de la API                                                          |
+| `CORS_ORIGINS`   | Orígenes permitidos separados por coma (whitelist). Vacío = CORS deshabilitado |
+| `DB_HOST`        | Host de PostgreSQL                                                             |
+| `DB_PORT`        | Puerto de PostgreSQL                                                           |
+| `DB_USER`        | Usuario de la base de datos                                                    |
+| `DB_PASSWORD`    | Contraseña de la base de datos                                                 |
+| `DB_NAME`        | Nombre de la base de datos                                                     |
+| `JWT_SECRET`     | Secreto para firmar los tokens JWT                                             |
+| `JWT_EXPIRES_IN` | Expiración de los tokens JWT (ej. `1d`, `12h`)                                 |
 
 El archivo `.env` está ignorado por git: nunca lo commitees con valores reales.
 

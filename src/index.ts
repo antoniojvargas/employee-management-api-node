@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import Fastify from 'fastify';
+import { corsPlugin } from './api/plugins/cors.plugin.js';
 import { jwtAuthPlugin } from './api/plugins/jwt-auth.js';
 import { requestLoggingPlugin } from './api/plugins/request-logging.plugin.js';
 import { errorHandlerPlugin } from './api/plugins/error-handler.plugin.js';
@@ -15,6 +16,7 @@ import { migrateAndSeed } from './infrastructure/database/migrate-and-seed.js';
 
 const app = Fastify({ logger: buildLoggerOptions() });
 
+app.register(corsPlugin);
 app.register(jwtAuthPlugin);
 app.register(requestLoggingPlugin);
 app.register(errorHandlerPlugin);
