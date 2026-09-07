@@ -6,7 +6,7 @@ const salarySchema = z
   .number()
   .min(0)
   .max(99999999.99)
-  .refine((value) => Number.isInteger(Math.round(value * 100)), {
+  .refine((value) => Math.round(value * 100) / 100 === value, {
     message: 'El salario no puede tener más de 2 decimales',
   });
 
