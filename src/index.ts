@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import Fastify from 'fastify';
 import { jwtAuthPlugin } from './api/plugins/jwt-auth.js';
+import { requestLoggingPlugin } from './api/plugins/request-logging.plugin.js';
 import { authRoutes } from './api/routes/auth.routes.js';
 import { departmentRoutes } from './api/routes/departments.routes.js';
 import { employeeRoutes } from './api/routes/employees.routes.js';
@@ -12,6 +13,7 @@ import { migrateAndSeed } from './infrastructure/database/migrate-and-seed.js';
 const app = Fastify({ logger: true });
 
 app.register(jwtAuthPlugin);
+app.register(requestLoggingPlugin);
 app.register(authRoutes);
 app.register(departmentRoutes);
 app.register(employeeRoutes);
