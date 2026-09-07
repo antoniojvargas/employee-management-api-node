@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 import request from 'supertest';
 import Fastify, { type FastifyInstance } from 'fastify';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from '../../../application/errors/index.js';
 import { errorHandlerPlugin, type ErrorHandlerOptions } from '../error-handler.plugin.js';
 
 async function buildTestApp(pluginOptions?: ErrorHandlerOptions): Promise<FastifyInstance> {
@@ -15,6 +20,18 @@ async function buildTestApp(pluginOptions?: ErrorHandlerOptions): Promise<Fastif
     const err = new Error('Datos de entrada inválidos') as Error & { statusCode?: number };
     err.statusCode = 422;
     throw err;
+  });
+
+  app.get('/not-found', async () => {
+    throw new NotFoundError('El empleado no existe');
+  });
+
+  app.get('/validation', async () => {
+    throw new ValidationError('El salario debe ser positivo');
+  });
+
+  app.get('/unauthorized', async () => {
+    throw new UnauthorizedError('Credenciales inválidas');
   });
 
   app.get('/explicit', async (_request, reply) => {
@@ -80,6 +97,39 @@ describe('Error handler global (plugin de Fastify)', () => {
     });
   });
 
+  it('mapea NotFoundError a 404 Not Found', async () => {
+    const response = await request(app.server).get('/not-found');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: 'Not Found',
+      message: 'El empleado no existe',
+      correlationId: expect.any(String),
+    });
+  });
+
+  it('mapea ValidationError a 400 Bad Request', async () => {
+    const response = await request(app.server).get('/validation');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Bad Request',
+      message: 'El salario debe ser positivo',
+      correlationId: expect.any(String),
+    });
+  });
+
+  it('mapea UnauthorizedError a 401 Unauthorized', async () => {
+    const response = await request(app.server).get('/unauthorized');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: 'Unauthorized',
+      message: 'Credenciales inválidas',
+      correlationId: expect.any(String),
+    });
+  });
+
   it('no altera las respuestas de error emitidas explícitamente por las rutas', async () => {
     const response = await request(app.server).get('/explicit');
 
@@ -94,6 +144,17 @@ describe('Error handler global (plugin de Fastify)', () => {
     expect(response.body).toEqual({
       error: 'Internal Server Error',
       message: 'Error interno del servidor',
+      correlationId: expect.any(String),
+    });
+  });
+
+  it('expone el mensaje de errores de dominio 4xx también en producción', async () => {
+    const response = await request(productionApp.server).get('/not-found');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      error: 'Not Found',
+      message: 'El empleado no existe',
       correlationId: expect.any(String),
     });
   });

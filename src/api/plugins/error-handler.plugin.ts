@@ -1,5 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import {
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from '../../application/errors/index.js';
 import { env } from '../../infrastructure/config/env.js';
 
 const INTERNAL_ERROR_MESSAGE = 'Error interno del servidor';
@@ -34,6 +39,15 @@ interface ErrorResponse {
 }
 
 function resolveStatus(error: unknown): number {
+  if (error instanceof NotFoundError) {
+    return 404;
+  }
+  if (error instanceof ValidationError) {
+    return 400;
+  }
+  if (error instanceof UnauthorizedError) {
+    return 401;
+  }
   if (typeof error === 'object' && error !== null && 'statusCode' in error) {
     const statusCode = (error as { statusCode?: unknown }).statusCode;
     if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 600) {
