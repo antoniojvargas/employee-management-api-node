@@ -6,6 +6,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from '../../../application/errors/index.js';
+import type { JsonSchema } from '../../schemas/json-schema.js';
 import { errorHandlerPlugin, type ErrorHandlerOptions } from '../error-handler.plugin.js';
 
 async function buildTestApp(pluginOptions?: ErrorHandlerOptions): Promise<FastifyInstance> {
@@ -33,6 +34,15 @@ async function buildTestApp(pluginOptions?: ErrorHandlerOptions): Promise<Fastif
   app.get('/unauthorized', async () => {
     throw new UnauthorizedError('Credenciales inválidas');
   });
+
+  const bodySchema: JsonSchema = {
+    type: 'object',
+    required: ['name'],
+    properties: { name: { type: 'string' } },
+    additionalProperties: false,
+  };
+
+  app.post('/schema-validation', { schema: { body: bodySchema } }, async () => 'ok');
 
   app.get('/explicit', async (_request, reply) => {
     return reply.code(404).send({ message: 'Sin formato global' });
@@ -126,6 +136,17 @@ describe('Error handler global (plugin de Fastify)', () => {
     expect(response.body).toEqual({
       error: 'Unauthorized',
       message: 'Credenciales inválidas',
+      correlationId: expect.any(String),
+    });
+  });
+
+  it('mapea errores de validación de esquema Fastify a 400 con mensaje genérico', async () => {
+    const response = await request(app.server).post('/schema-validation').send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      error: 'Bad Request',
+      message: 'Datos inválidos',
       correlationId: expect.any(String),
     });
   });
