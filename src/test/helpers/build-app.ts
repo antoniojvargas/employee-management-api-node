@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { jwtAuthPlugin } from '../../api/plugins/jwt-auth.js';
 import { requestLoggingPlugin } from '../../api/plugins/request-logging.plugin.js';
+import { errorHandlerPlugin } from '../../api/plugins/error-handler.plugin.js';
 import { authRoutes } from '../../api/routes/auth.routes.js';
 import { departmentRoutes } from '../../api/routes/departments.routes.js';
 import { employeeRoutes } from '../../api/routes/employees.routes.js';
@@ -12,6 +13,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(jwtAuthPlugin);
   await app.register(requestLoggingPlugin);
+  await app.register(errorHandlerPlugin);
   await app.register(authRoutes);
   await app.register(departmentRoutes);
   await app.register(employeeRoutes);
