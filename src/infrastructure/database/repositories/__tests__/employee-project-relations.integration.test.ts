@@ -6,6 +6,7 @@ import { ProjectEntity } from '../../entities/project.orm-entity.js';
 import { TypeOrmDepartmentRepository } from '../department.repository.js';
 import { TypeOrmEmployeeRepository } from '../employee.repository.js';
 import { TypeOrmProjectRepository } from '../project.repository.js';
+import { resetTestDatabase } from '../../../../test/helpers/test-database.js';
 
 describe('Relación muchos-a-muchos empleados-proyectos (integración)', () => {
   let departmentRepo: TypeOrmDepartmentRepository;
@@ -27,10 +28,7 @@ describe('Relación muchos-a-muchos empleados-proyectos (integración)', () => {
   });
 
   beforeEach(async () => {
-    await AppDataSource.query('TRUNCATE TABLE "employee_projects" RESTART IDENTITY CASCADE');
-    await AppDataSource.query('TRUNCATE TABLE "projects" RESTART IDENTITY CASCADE');
-    await AppDataSource.query('TRUNCATE TABLE "employees" RESTART IDENTITY CASCADE');
-    await AppDataSource.query('TRUNCATE TABLE "departments" RESTART IDENTITY CASCADE');
+    await resetTestDatabase();
   });
 
   async function joinRows(

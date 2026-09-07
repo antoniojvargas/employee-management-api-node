@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import request from 'supertest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../../test/helpers/build-app.js';
+import { resetTestDatabase } from '../../../test/helpers/test-database.js';
 import { AppDataSource } from '../../../infrastructure/database/data-source.js';
 import { runSeed } from '../../../infrastructure/database/seeders/seed.js';
 
@@ -18,10 +19,6 @@ describe('Flujo completo (e2e)', () => {
   beforeAll(async () => {
     await AppDataSource.initialize();
     await AppDataSource.runMigrations();
-    await AppDataSource.query('TRUNCATE TABLE "user_roles" RESTART IDENTITY CASCADE');
-    await AppDataSource.query('TRUNCATE TABLE "users" RESTART IDENTITY CASCADE');
-    await AppDataSource.query('TRUNCATE TABLE "roles" RESTART IDENTITY CASCADE');
-    await runSeed(AppDataSource);
     app = await buildApp();
   });
 
@@ -32,6 +29,11 @@ describe('Flujo completo (e2e)', () => {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
     }
+  });
+
+  beforeEach(async () => {
+    await resetTestDatabase();
+    await runSeed(AppDataSource);
   });
 
   it('registro, login y gestión completa de empleado como Admin (deniega la creación a User)', async () => {

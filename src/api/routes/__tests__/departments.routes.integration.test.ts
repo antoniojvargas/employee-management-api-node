@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { AppDataSource } from '../../../infrastructure/database/data-source.js';
 import { JwtTokenService } from '../../../infrastructure/auth/jwt-token.service.js';
 import { buildApp } from '../../../test/helpers/build-app.js';
+import { resetTestDatabase } from '../../../test/helpers/test-database.js';
 import { Roles } from '../../../application/constants/roles.js';
 import type { RoleName } from '../../../application/constants/roles.js';
 
@@ -19,13 +20,6 @@ function authHeader(token: string): { Authorization: string } {
 
 async function createToken(roles: RoleName[]): Promise<string> {
   return tokenService.generateToken('user-id', 'user@example.com', roles);
-}
-
-async function truncateTables(): Promise<void> {
-  await AppDataSource.query('TRUNCATE TABLE "employee_projects" RESTART IDENTITY CASCADE');
-  await AppDataSource.query('TRUNCATE TABLE "projects" RESTART IDENTITY CASCADE');
-  await AppDataSource.query('TRUNCATE TABLE "employees" RESTART IDENTITY CASCADE');
-  await AppDataSource.query('TRUNCATE TABLE "departments" RESTART IDENTITY CASCADE');
 }
 
 async function insertDepartment(name: string): Promise<string> {
@@ -84,7 +78,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await truncateTables();
+  await resetTestDatabase();
 });
 
 describe('Department routes (integración)', () => {
