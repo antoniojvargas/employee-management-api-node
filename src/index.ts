@@ -7,10 +7,11 @@ import { departmentRoutes } from './api/routes/departments.routes.js';
 import { employeeRoutes } from './api/routes/employees.routes.js';
 import { projectRoutes } from './api/routes/projects.routes.js';
 import { env } from './infrastructure/config/env.js';
+import { buildLoggerOptions } from './infrastructure/config/logger.js';
 import { AppDataSource } from './infrastructure/database/data-source.js';
 import { migrateAndSeed } from './infrastructure/database/migrate-and-seed.js';
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: buildLoggerOptions() });
 
 app.register(jwtAuthPlugin);
 app.register(requestLoggingPlugin);
