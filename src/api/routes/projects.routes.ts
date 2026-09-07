@@ -1,8 +1,9 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { ZodError } from 'zod';
+import { z } from 'zod';
 import { Roles } from '../../application/constants/roles.js';
 import {
   createProjectDtoSchema,
+  projectDtoSchema,
   type CreateProjectDto,
   type UpdateProjectDto,
   updateProjectDtoSchema,
@@ -11,6 +12,11 @@ import { ProjectService } from '../../application/services/project.service.js';
 import { AppDataSource } from '../../infrastructure/database/data-source.js';
 import { ProjectEntity } from '../../infrastructure/database/entities/project.orm-entity.js';
 import { TypeOrmProjectRepository } from '../../infrastructure/database/repositories/project.repository.js';
+import {
+  idParamsSchema,
+  messageErrorResponseSchema,
+  toJsonSchema,
+} from '../schemas/json-schema.js';
 
 export async function projectRoutes(
   fastify: FastifyInstance,
@@ -19,9 +25,22 @@ export async function projectRoutes(
   const projects = new TypeOrmProjectRepository(AppDataSource.getRepository(ProjectEntity));
   const projectService = new ProjectService(projects);
 
+  const projectResponseSchema = toJsonSchema(projectDtoSchema);
+  const projectsListResponseSchema = toJsonSchema(z.array(projectDtoSchema));
+  const updateProjectBodySchema = {
+    ...toJsonSchema(updateProjectDtoSchema),
+    minProperties: 1,
+  };
+
   fastify.get(
     '/api/projects',
-    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    {
+      preHandler: fastify.requireRole(Roles.Admin, Roles.User),
+      schema: {
+        tags: ['Proyectos'],
+        response: { 200: projectsListResponseSchema },
+      },
+    },
     async (_request, reply) => {
       const allProjects = await projectService.getAll();
       return reply.code(200).send(allProjects);
@@ -30,7 +49,17 @@ export async function projectRoutes(
 
   fastify.get(
     '/api/projects/:id',
-    { preHandler: fastify.requireRole(Roles.Admin, Roles.User) },
+    {
+      preHandler: fastify.requireRole(Roles.Admin, Roles.User),
+      schema: {
+        tags: ['Proyectos'],
+        params: idParamsSchema,
+        response: {
+          200: projectResponseSchema,
+          404: messageErrorResponseSchema,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const project = await projectService.getById(id);
@@ -43,18 +72,21 @@ export async function projectRoutes(
 
   fastify.post(
     '/api/projects',
-    { preHandler: fastify.requireRole(Roles.Admin) },
+    {
+      preHandler: fastify.requireRole(Roles.Admin),
+      schema: {
+        tags: ['Proyectos'],
+        body: toJsonSchema(createProjectDtoSchema),
+        response: { 201: projectResponseSchema },
+      },
+    },
     async (request, reply) => {
-      let input: CreateProjectDto;
-      try {
-        input = createProjectDtoSchema.parse(request.body);
-      } catch (err) {
-        if (err instanceof ZodError) {
-          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
-        }
-        throw err;
-      }
-
+      const body = request.body as CreateProjectDto;
+      const input: CreateProjectDto = {
+        name: body.name,
+        startDate: new Date(body.startDate),
+        endDate: new Date(body.endDate),
+      };
       const project = await projectService.create(input);
       return reply.code(201).header('Location', `/api/projects/${project.id}`).send(project);
     },
@@ -62,20 +94,24 @@ export async function projectRoutes(
 
   fastify.put(
     '/api/projects/:id',
-    { preHandler: fastify.requireRole(Roles.Admin) },
+    {
+      preHandler: fastify.requireRole(Roles.Admin),
+      schema: {
+        tags: ['Proyectos'],
+        params: idParamsSchema,
+        body: updateProjectBodySchema,
+        response: {
+          200: projectResponseSchema,
+          404: messageErrorResponseSchema,
+        },
+      },
+    },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-
-      let input: UpdateProjectDto;
-      try {
-        input = updateProjectDtoSchema.parse(request.body);
-      } catch (err) {
-        if (err instanceof ZodError) {
-          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
-        }
-        throw err;
-      }
-
+      const body = request.body as UpdateProjectDto;
+      const input: UpdateProjectDto = { ...body };
+      if (body.startDate !== undefined) input.startDate = new Date(body.startDate);
+      if (body.endDate !== undefined) input.endDate = new Date(body.endDate);
       const project = await projectService.update(id, input);
       if (!project) {
         return reply.code(404).send({ message: 'Proyecto no encontrado' });
@@ -86,7 +122,13 @@ export async function projectRoutes(
 
   fastify.delete(
     '/api/projects/:id',
-    { preHandler: fastify.requireRole(Roles.Admin) },
+    {
+      preHandler: fastify.requireRole(Roles.Admin),
+      schema: {
+        tags: ['Proyectos'],
+        params: idParamsSchema,
+      },
+    },
     async (request, reply) => {
       const { id } = request.params as { id: string };
       const deleted = await projectService.delete(id);

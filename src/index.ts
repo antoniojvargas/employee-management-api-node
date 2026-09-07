@@ -6,6 +6,7 @@ import { requestLoggingPlugin } from './api/plugins/request-logging.plugin.js';
 import { errorHandlerPlugin } from './api/plugins/error-handler.plugin.js';
 import { rateLimitPlugin } from './api/plugins/rate-limit.plugin.js';
 import { securityHeadersPlugin } from './api/plugins/security-headers.plugin.js';
+import { swaggerPlugin } from './api/plugins/swagger.plugin.js';
 import { authRoutes } from './api/routes/auth.routes.js';
 import { departmentRoutes } from './api/routes/departments.routes.js';
 import { employeeRoutes } from './api/routes/employees.routes.js';
@@ -14,8 +15,14 @@ import { env } from './infrastructure/config/env.js';
 import { buildLoggerOptions } from './infrastructure/config/logger.js';
 import { AppDataSource } from './infrastructure/database/data-source.js';
 import { migrateAndSeed } from './infrastructure/database/migrate-and-seed.js';
+import { dateTimeFormat } from './api/schemas/json-schema.js';
 
-const app = Fastify({ logger: buildLoggerOptions() });
+const app = Fastify({
+  logger: buildLoggerOptions(),
+  ajv: {
+    onCreate: dateTimeFormat,
+  },
+});
 
 app.register(corsPlugin);
 app.register(rateLimitPlugin);
@@ -23,6 +30,7 @@ app.register(jwtAuthPlugin);
 app.register(requestLoggingPlugin);
 app.register(errorHandlerPlugin);
 app.register(securityHeadersPlugin);
+app.register(swaggerPlugin);
 app.register(authRoutes);
 app.register(departmentRoutes);
 app.register(employeeRoutes);

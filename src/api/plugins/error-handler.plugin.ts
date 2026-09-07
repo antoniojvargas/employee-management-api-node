@@ -8,6 +8,7 @@ import {
 import { env } from '../../infrastructure/config/env.js';
 
 const INTERNAL_ERROR_MESSAGE = 'Error interno del servidor';
+const INVALID_DATA_MESSAGE = 'Datos inválidos';
 
 const HTTP_STATUS_ERROR_NAMES: Record<number, string> = {
   400: 'Bad Request',
@@ -61,9 +62,20 @@ function errorName(statusCode: number): string {
   return HTTP_STATUS_ERROR_NAMES[statusCode] ?? 'Error';
 }
 
+function isFastifyValidationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'FST_ERR_VALIDATION'
+  );
+}
+
 function resolveMessage(error: unknown, statusCode: number, isProduction: boolean): string {
   if (statusCode >= 500 && isProduction) {
     return INTERNAL_ERROR_MESSAGE;
+  }
+  if (isFastifyValidationError(error)) {
+    return INVALID_DATA_MESSAGE;
   }
   return error instanceof Error && error.message ? error.message : 'Error inesperado';
 }

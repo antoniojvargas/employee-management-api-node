@@ -186,7 +186,11 @@ describe('Department routes (integración)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(
-        expect.objectContaining({ message: 'Datos inválidos', errors: expect.any(Object) }),
+        expect.objectContaining({
+          error: 'Bad Request',
+          message: 'Datos inválidos',
+          correlationId: expect.any(String),
+        }),
       );
     });
 

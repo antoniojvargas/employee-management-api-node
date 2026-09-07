@@ -252,7 +252,11 @@ describe('Employee routes (integración)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(
-        expect.objectContaining({ message: 'Datos inválidos', errors: expect.any(Object) }),
+        expect.objectContaining({
+          error: 'Bad Request',
+          message: 'Datos inválidos',
+          correlationId: expect.any(String),
+        }),
       );
     });
 
@@ -578,7 +582,11 @@ describe('Employee routes (integración)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual(
-        expect.objectContaining({ message: 'Datos inválidos', errors: expect.any(Object) }),
+        expect.objectContaining({
+          error: 'Bad Request',
+          message: 'Datos inválidos',
+          correlationId: expect.any(String),
+        }),
       );
     });
 
@@ -596,7 +604,7 @@ describe('Employee routes (integración)', () => {
         .send({ position: 'Senior', startDate: '2026-03-01', endDate: '2026-02-01' });
 
       expect(response.status).toBe(400);
-      expect(response.body.message).toBe('Datos inválidos');
+      expect(response.body.message).toBe('El endDate debe ser mayor o igual al startDate');
     });
 
     it('devuelve 403 para usuario sin rol Admin', async () => {
@@ -623,7 +631,9 @@ describe('Employee routes (integración)', () => {
         departmentId: null,
       });
 
-      const response = await request(app.server).post(`/api/employees/${emp.id}/position-history`);
+      const response = await request(app.server)
+        .post(`/api/employees/${emp.id}/position-history`)
+        .send({ position: 'Senior', startDate: '2026-03-01', endDate: '2026-12-31' });
 
       expect(response.status).toBe(401);
     });

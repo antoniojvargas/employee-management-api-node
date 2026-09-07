@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { ZodError } from 'zod';
 import {
+  authResponseDtoSchema,
   loginDtoSchema,
   registerDtoSchema,
   type LoginDto,
@@ -13,6 +13,7 @@ import { TypeOrmUserRepository } from '../../infrastructure/database/repositorie
 import { AuthService, type AuthError } from '../../infrastructure/auth/auth.service.js';
 import { JwtTokenService } from '../../infrastructure/auth/jwt-token.service.js';
 import { loginRateLimitConfig } from '../plugins/rate-limit.plugin.js';
+import { messageErrorResponseSchema, toJsonSchema } from '../schemas/json-schema.js';
 
 function authErrorResponse(error: AuthError): { statusCode: number; message: string } {
   switch (error.code) {
@@ -38,43 +39,52 @@ export async function authRoutes(
   );
   const authService = new AuthService(users, new JwtTokenService());
 
-  fastify.post('/api/auth/register', async (request, reply) => {
-    let input: RegisterDto;
-    try {
-      input = registerDtoSchema.parse(request.body);
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
-      }
-      throw err;
-    }
+  const registerSuccessSchema = toJsonSchema(authResponseDtoSchema);
 
-    const result = await authService.register(input);
-    if (!result.ok) {
-      const { statusCode, message } = authErrorResponse(result.error);
-      return reply.code(statusCode).send({ message });
-    }
-    return reply.code(201).send(result.data);
-  });
+  fastify.post(
+    '/api/auth/register',
+    {
+      schema: {
+        tags: ['Autenticación'],
+        body: toJsonSchema(registerDtoSchema),
+        response: {
+          201: registerSuccessSchema,
+          409: messageErrorResponseSchema,
+          500: messageErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const input = request.body as RegisterDto;
+      const result = await authService.register(input);
+      if (!result.ok) {
+        const { statusCode, message } = authErrorResponse(result.error);
+        return reply.code(statusCode as 201 | 409 | 500).send({ message });
+      }
+      return reply.code(201).send(result.data);
+    },
+  );
 
   fastify.post(
     '/api/auth/login',
-    { config: { rateLimit: loginRateLimitConfig } },
+    {
+      config: { rateLimit: loginRateLimitConfig },
+      schema: {
+        tags: ['Autenticación'],
+        body: toJsonSchema(loginDtoSchema),
+        response: {
+          200: toJsonSchema(authResponseDtoSchema),
+          401: messageErrorResponseSchema,
+          500: messageErrorResponseSchema,
+        },
+      },
+    },
     async (request, reply) => {
-      let input: LoginDto;
-      try {
-        input = loginDtoSchema.parse(request.body);
-      } catch (err) {
-        if (err instanceof ZodError) {
-          return reply.code(400).send({ message: 'Datos inválidos', errors: err.flatten() });
-        }
-        throw err;
-      }
-
+      const input = request.body as LoginDto;
       const result = await authService.login(input);
       if (!result.ok) {
         const { statusCode, message } = authErrorResponse(result.error);
-        return reply.code(statusCode).send({ message });
+        return reply.code(statusCode as 200 | 401 | 500).send({ message });
       }
       return reply.code(200).send(result.data);
     },
