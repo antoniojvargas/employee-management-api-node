@@ -350,6 +350,405 @@ Tabla completa de los endpoints expuestos por la API. La columna **Rol** indica 
 
 > Las rutas protegidas requieren el encabezado `Authorization: Bearer <token>` (ver [Autenticación y autorización](#autenticación-y-autorización)). Devuelven `401` si el token falta o es inválido y `403` si el token es válido pero el rol es insuficiente.
 
+## Endpoint Testing
+
+Walkthrough completo para probar la API manualmente con `curl`, de principio a fin: autenticación, CRUD de departamentos, empleados (incluido historial de posiciones y asignación de proyectos), proyectos y casos de error.
+
+Los ejemplos asumen que la API corre en `http://localhost:8080` (mapping de `docker compose`). Si la ejecutas en otro puerto, ajusta la variable `BASE_URL`:
+
+```bash
+BASE_URL=http://localhost:8080
+```
+
+Para extraer los tokens e ids de las respuestas se usa `python3` (disponible por defecto en macOS y la mayoría de Linux). Si tienes [`jq`](https://jqlang.github.io/jq/), sustituye `| python3 -c "..."` por `| jq -r '.token'` (o `'.id'`).
+
+### 1. Preparación y estado
+
+**Levanta** la API y PostgreSQL:
+
+```bash
+docker compose up --build
+```
+
+**Health check** — la API arrancó y se conecta a la base de datos:
+
+```bash
+curl "$BASE_URL/health"
+```
+
+**Respuesta `200`:**
+
+```json
+{ "status": "ok", "db": "connected" }
+```
+
+### 2. Autenticación
+
+**Registra un usuario** (obtiene automáticamente el rol `User`):
+
+```bash
+curl -X POST "$BASE_URL/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"User123456"}'
+```
+
+**Respuesta `201`:**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresAt": "2026-09-07T10:15:30.000Z"
+}
+```
+
+**Inicia sesión como admin** (creado automáticamente por el seed con `admin@example.com` / `Admin1234`) y guarda el token en una variable de shell:
+
+```bash
+ADMIN_TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Admin1234"}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+```
+
+**Inicia sesión como el usuario recién registrado** y guarda también su token (lo usarás para probar el control de accesos):
+
+```bash
+USER_TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"User123456"}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+```
+
+### 3. Departamentos (CRUD)
+
+**Crea** un departamento y guarda su id:
+
+```bash
+DEPARTMENT_ID=$(curl -s -X POST "$BASE_URL/api/departments" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"name":"Ingeniería"}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+```
+
+**Respuesta `201`:**
+
+```json
+{
+  "id": "d45f1c2e-0000-4f3a-a2b1-11aa22bb33cc",
+  "name": "Ingeniería",
+  "createdAt": "2026-09-07T10:16:00.000Z",
+  "updatedAt": "2026-09-07T10:16:00.000Z"
+}
+```
+
+**Lista** todos los departamentos (paginado):
+
+```bash
+curl -s "$BASE_URL/api/departments?page=1&pageSize=10" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Respuesta `200`** — `data` es la lista y `pagination` los metadatos:
+
+```json
+{
+  "data": [
+    {
+      "id": "d45f1c2e-...",
+      "name": "Ingeniería",
+      "createdAt": "2026-09-07T10:16:00.000Z",
+      "updatedAt": "2026-09-07T10:16:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 10, "total": 1, "totalPages": 1 }
+}
+```
+
+**Obtén** un departamento por id:
+
+```bash
+curl -s "$BASE_URL/api/departments/$DEPARTMENT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Consulta** los empleados del departamento con sus proyectos:
+
+```bash
+curl -s "$BASE_URL/api/departments/$DEPARTMENT_ID/employees-with-projects" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Actualiza** el nombre:
+
+```bash
+curl -s -X PUT "$BASE_URL/api/departments/$DEPARTMENT_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"name":"Ingeniería y Desarrollo"}'
+```
+
+**Elimina** el departamento (respuesta `204` sin cuerpo):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE "$BASE_URL/api/departments/$DEPARTMENT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### 4. Empleados (CRUD)
+
+**Crea** un departamento y un empleado, y guarda ambos ids:
+
+```bash
+DEPARTMENT_ID=$(curl -s -X POST "$BASE_URL/api/departments" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"name":"Ingeniería"}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+
+EMPLOYEE_ID=$(curl -s -X POST "$BASE_URL/api/employees" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "{\"name\":\"María Gómez\",\"currentPosition\":\"Senior Manager\",\"salary\":4800.5,\"departmentId\":\"$DEPARTMENT_ID\"}" \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+```
+
+> `currentPosition` determina la estrategia de bono: este empleado (`Senior Manager`) recibirá un 25% sobre su salario. Si omites `departmentId`, el empleado se crea sin departamento.
+
+**Respuesta `201`:**
+
+```json
+{
+  "id": "9a3f1d2c-1111-4b2a-a3c4-55dd66ee77ff",
+  "name": "María Gómez",
+  "currentPosition": "Senior Manager",
+  "salary": 4800.5,
+  "departmentId": "d45f1c2e-...",
+  "createdAt": "2026-09-07T10:17:00.000Z",
+  "updatedAt": "2026-09-07T10:17:00.000Z"
+}
+```
+
+**Lista** empleados (paginado, cada item con su `bonus` calculado):
+
+```bash
+curl -s "$BASE_URL/api/employees?page=1&pageSize=10" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Respuesta parcial `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": "9a3f1d2c-...",
+      "name": "María Gómez",
+      "currentPosition": "Senior Manager",
+      "salary": 4800.5,
+      "bonus": 1200.125,
+      "departmentId": "d45f1c2e-...",
+      "createdAt": "2026-09-07T10:17:00.000Z",
+      "updatedAt": "2026-09-07T10:17:00.000Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 10, "total": 1, "totalPages": 1 }
+}
+```
+
+**Obtén** un empleado por id:
+
+```bash
+curl -s "$BASE_URL/api/employees/$EMPLOYEE_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Actualiza** campos (parcialmente, con al menos un campo):
+
+```bash
+curl -s -X PUT "$BASE_URL/api/employees/$EMPLOYEE_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"currentPosition":"Tech Lead","salary":5600}'
+```
+
+### 5. Historial de posiciones
+
+**Añade** un cargo al historial del empleado:
+
+```bash
+curl -s -X POST "$BASE_URL/api/employees/$EMPLOYEE_ID/position-history" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"position":"Senior Manager","startDate":"2022-01-01T00:00:00.000Z","endDate":"2024-12-31T00:00:00.000Z"}'
+```
+
+**Respuesta `201`:**
+
+```json
+{
+  "id": "7b5e6f0a-2222-4c3a-b4d5-6677889999aa",
+  "employeeId": "9a3f1d2c-...",
+  "position": "Senior Manager",
+  "startDate": "2022-01-01T00:00:00.000Z",
+  "endDate": "2024-12-31T00:00:00.000Z",
+  "createdAt": "2026-09-07T10:18:00.000Z",
+  "updatedAt": "2026-09-07T10:18:00.000Z"
+}
+```
+
+**Consulta** el historial completo del empleado:
+
+```bash
+curl -s "$BASE_URL/api/employees/$EMPLOYEE_ID/position-history" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+> `endDate` debe ser mayor o igual a `startDate`; de lo contrario responde `400` con `message: "El endDate debe ser mayor o igual al startDate"` (la misma regla está en el esquema Zod del body).
+
+### 6. Proyectos (CRUD) y asignación
+
+**Crea** un proyecto y guarda su id:
+
+```bash
+PROJECT_ID=$(curl -s -X POST "$BASE_URL/api/projects" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"name":"API Platform","startDate":"2026-02-01T00:00:00.000Z","endDate":"2026-12-31T00:00:00.000Z"}' \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+```
+
+**Lista** todos los proyectos:
+
+```bash
+curl -s "$BASE_URL/api/projects" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Asigna** el proyecto al empleado:
+
+```bash
+curl -s -X POST "$BASE_URL/api/employees/$EMPLOYEE_ID/projects/$PROJECT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Respuesta `201`** — el empleado completo con su `department` y `projects`:
+
+```json
+{
+  "id": "9a3f1d2c-...",
+  "name": "María Gómez",
+  "currentPosition": "Tech Lead",
+  "salary": 5600,
+  "departmentId": "d45f1c2e-...",
+  "department": { "id": "d45f1c2e-...", "name": "Ingeniería" },
+  "projects": [{ "id": "5c1e2f3d-3333-4a5b-c6d7-889900aabbcc", "name": "API Platform" }],
+  "createdAt": "2026-09-07T10:17:00.000Z",
+  "updatedAt": "2026-09-07T10:19:00.000Z"
+}
+```
+
+**Verifica** la asignación desde el departamento:
+
+```bash
+curl -s "$BASE_URL/api/departments/$DEPARTMENT_ID/employees-with-projects" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Actualiza** el proyecto:
+
+```bash
+curl -s -X PUT "$BASE_URL/api/projects/$PROJECT_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"name":"API Platform v2"}'
+```
+
+**Desasigna** el proyecto del empleado (respuesta `204` sin cuerpo):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE "$BASE_URL/api/employees/$EMPLOYEE_ID/projects/$PROJECT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Obtén** un proyecto por id:
+
+```bash
+curl -s "$BASE_URL/api/projects/$PROJECT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Elimina** el proyecto (respuesta `204` sin cuerpo):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE "$BASE_URL/api/projects/$PROJECT_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### 7. Autorización y manejo de errores
+
+**`401` sin token** — cualquier ruta protegida:
+
+```bash
+curl -s "$BASE_URL/api/employees"
+```
+
+```json
+{ "message": "No se encontró un token de autorización en el encabezado" }
+```
+
+**`403` con token de rol `User`** en una mutación que exige `Admin`:
+
+```bash
+curl -s -X POST "$BASE_URL/api/projects" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -d '{"name":"Intento","startDate":"2026-01-01T00:00:00.000Z","endDate":"2026-06-30T00:00:00.000Z"}'
+```
+
+```json
+{ "message": "No autorizado: se requiere el rol Admin" }
+```
+
+**`409` email duplicado** al volver a registrar el mismo usuario:
+
+```bash
+curl -s -X POST "$BASE_URL/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"User123456"}'
+```
+
+```json
+{ "message": "El email ya está registrado" }
+```
+
+**`404` recurso inexistente** con un UUID que no existe en la base de datos:
+
+```bash
+curl -s "$BASE_URL/api/employees/00000000-0000-0000-0000-000000000000" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+```json
+{ "message": "Empleado no encontrado" }
+```
+
+**`400` validación** con el esquema de Zod (email inválido), gestionado por el error handler global:
+
+```bash
+curl -s -X POST "$BASE_URL/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"no-es-un-email","password":"User123456"}'
+```
+
+```json
+{
+  "error": "Bad Request",
+  "message": "Datos inválidos",
+  "correlationId": "req-1"
+}
+```
+
 ## Database Schema
 
 El esquema de persistencia para el dominio de empleados está modelado con TypeORM. Las columnas usan `snake_case` en base de datos y `camelCase` en código; las claves primarias son UUID con `uuid_generate_v4()`; los timestamps `created_at` / `updated_at` usan `timestamptz`.
