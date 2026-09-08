@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import { decode, type JwtPayload } from 'jsonwebtoken';
-import { Roles, type RoleName } from '../../application/constants/roles.js';
-import type { AuthResponseDto, LoginDto, RegisterDto } from '../../application/dtos/auth.dto.js';
+import { Roles, type RoleName } from '../constants/roles.js';
+import type { AuthResponseDto, LoginDto, RegisterDto } from '../dtos/auth.dto.js';
 import type { UserRepository } from '../../domain/ports/user-repository.js';
-import type { IJwtTokenService } from './jwt-token.service.js';
+import type { IJwtTokenService } from './token.service.interface.js';
 
 export type AuthErrorCode = 'email_in_use' | 'invalid_credentials' | 'role_not_found';
 

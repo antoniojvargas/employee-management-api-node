@@ -8,10 +8,7 @@ import {
   type UpdateProjectDto,
   updateProjectDtoSchema,
 } from '../../application/dtos/project.dto.js';
-import { ProjectService } from '../../application/services/project.service.js';
-import { AppDataSource } from '../../infrastructure/database/data-source.js';
-import { ProjectEntity } from '../../infrastructure/database/entities/project.orm-entity.js';
-import { TypeOrmProjectRepository } from '../../infrastructure/database/repositories/project.repository.js';
+import { getProjectService } from '../../infrastructure/di/app-container.js';
 import {
   idParamsSchema,
   messageErrorResponseSchema,
@@ -22,8 +19,7 @@ export async function projectRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ): Promise<void> {
-  const projects = new TypeOrmProjectRepository(AppDataSource.getRepository(ProjectEntity));
-  const projectService = new ProjectService(projects);
+  const projectService = getProjectService();
 
   const projectResponseSchema = toJsonSchema(projectDtoSchema);
   const projectsListResponseSchema = toJsonSchema(z.array(projectDtoSchema));

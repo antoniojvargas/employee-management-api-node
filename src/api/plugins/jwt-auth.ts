@@ -2,7 +2,7 @@ import jwt from '@fastify/jwt';
 import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyPluginOptions, FastifyReply, FastifyRequest } from 'fastify';
 import type { RoleName } from '../../application/constants/roles.js';
-import type { JwtTokenPayload } from '../../infrastructure/auth/jwt-token.service.js';
+import type { JwtTokenPayload } from '../../application/services/token.service.interface.js';
 import { env } from '../../infrastructure/config/env.js';
 
 type AuthorizeRoleHook = (request: FastifyRequest, reply: FastifyReply) => Promise<void>;

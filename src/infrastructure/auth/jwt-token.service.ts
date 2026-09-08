@@ -1,21 +1,19 @@
 import { sign, type SignOptions } from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import { env } from '../config/env.js';
-import type { RoleName } from '../../application/constants/roles.js';
+import type {
+  IJwtTokenService,
+  JwtTokenPayload,
+} from '../../application/services/token.service.interface.js';
 
-export interface JwtTokenPayload {
-  sub: string;
-  email: string;
-  jti: string;
-  roles: RoleName[];
-}
-
-export interface IJwtTokenService {
-  generateToken(userId: string, email: string, roles: RoleName[]): Promise<string>;
-}
+export type { JwtTokenPayload } from '../../application/services/token.service.interface.js';
 
 export class JwtTokenService implements IJwtTokenService {
-  async generateToken(userId: string, email: string, roles: RoleName[]): Promise<string> {
+  async generateToken(
+    userId: string,
+    email: string,
+    roles: JwtTokenPayload['roles'],
+  ): Promise<string> {
     const payload: JwtTokenPayload = {
       sub: userId,
       email,

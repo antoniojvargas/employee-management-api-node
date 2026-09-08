@@ -24,10 +24,7 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
   constructor(private readonly employees: Repository<EmployeeEntity>) {}
 
   async findById(id: string): Promise<Employee | null> {
-    const entity = await this.employees.findOne({
-      where: { id },
-      relations: ['positionHistory'],
-    });
+    const entity = await this.employees.findOne({ where: { id } });
     return entity ? this.toEmployee(entity) : null;
   }
 
@@ -40,13 +37,12 @@ export class TypeOrmEmployeeRepository implements IEmployeeRepository {
   }
 
   async findAll(): Promise<Employee[]> {
-    const entities = await this.employees.find({ relations: ['positionHistory'] });
+    const entities = await this.employees.find();
     return entities.map((entity) => this.toEmployee(entity));
   }
 
   async findAllPaginated(params: PaginationParams): Promise<PaginatedItems<Employee>> {
     const [entities, total] = await this.employees.findAndCount({
-      relations: ['positionHistory'],
       order: { createdAt: 'ASC', id: 'ASC' },
       skip: (params.page - 1) * params.pageSize,
       take: params.pageSize,

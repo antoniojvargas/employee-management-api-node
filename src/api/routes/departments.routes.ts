@@ -9,14 +9,7 @@ import {
   updateDepartmentDtoSchema,
 } from '../../application/dtos/department.dto.js';
 import { employeeWithDepartmentAndProjectsDtoSchema } from '../../application/dtos/employee.dto.js';
-import { DepartmentService } from '../../application/services/department.service.js';
-import { EmployeeService } from '../../application/services/employee.service.js';
-import { AppDataSource } from '../../infrastructure/database/data-source.js';
-import { DepartmentEntity } from '../../infrastructure/database/entities/department.orm-entity.js';
-import { EmployeeEntity } from '../../infrastructure/database/entities/employee.orm-entity.js';
-import { TypeOrmDepartmentRepository } from '../../infrastructure/database/repositories/department.repository.js';
-import { TypeOrmEmployeeRepository } from '../../infrastructure/database/repositories/employee.repository.js';
-import { resolveBonusCalculator } from '../../infrastructure/di/container.js';
+import { getDepartmentService, getEmployeeService } from '../../infrastructure/di/app-container.js';
 import {
   idParamsSchema,
   messageErrorResponseSchema,
@@ -29,13 +22,8 @@ export async function departmentRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ): Promise<void> {
-  const departments = new TypeOrmDepartmentRepository(
-    AppDataSource.getRepository(DepartmentEntity),
-  );
-  const departmentService = new DepartmentService(departments);
-
-  const employees = new TypeOrmEmployeeRepository(AppDataSource.getRepository(EmployeeEntity));
-  const employeeService = new EmployeeService(employees, resolveBonusCalculator());
+  const departmentService = getDepartmentService();
+  const employeeService = getEmployeeService();
 
   const departmentResponseSchema = toJsonSchema(departmentDtoSchema);
   const departmentItemSchema = toJsonSchema(departmentDtoSchema);

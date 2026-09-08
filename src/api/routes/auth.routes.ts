@@ -6,12 +6,8 @@ import {
   type LoginDto,
   type RegisterDto,
 } from '../../application/dtos/auth.dto.js';
-import { AppDataSource } from '../../infrastructure/database/data-source.js';
-import { RoleEntity } from '../../infrastructure/database/entities/role.orm-entity.js';
-import { UserEntity } from '../../infrastructure/database/entities/user.orm-entity.js';
-import { TypeOrmUserRepository } from '../../infrastructure/database/repositories/user.repository.js';
-import { AuthService, type AuthError } from '../../infrastructure/auth/auth.service.js';
-import { JwtTokenService } from '../../infrastructure/auth/jwt-token.service.js';
+import type { AuthError } from '../../application/services/auth.service.js';
+import { getAuthService } from '../../infrastructure/di/app-container.js';
 import { loginRateLimitConfig } from '../plugins/rate-limit.plugin.js';
 import { messageErrorResponseSchema, toJsonSchema } from '../schemas/json-schema.js';
 
@@ -33,11 +29,7 @@ export async function authRoutes(
   fastify: FastifyInstance,
   _options: FastifyPluginOptions,
 ): Promise<void> {
-  const users = new TypeOrmUserRepository(
-    AppDataSource.getRepository(UserEntity),
-    AppDataSource.getRepository(RoleEntity),
-  );
-  const authService = new AuthService(users, new JwtTokenService());
+  const authService = getAuthService();
 
   const registerSuccessSchema = toJsonSchema(authResponseDtoSchema);
 
