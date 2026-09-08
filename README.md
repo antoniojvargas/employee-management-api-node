@@ -1014,6 +1014,70 @@ El factory y las estrategias existentes **no se tocan**: la nueva estrategia se 
 | **Singleton**                  | `AppDataSource` (`src/infrastructure/database/data-source.ts:21`) es una única instancia de TypeORM compartida por import en toda la app, y `diContainer` (`container.ts:21`) el contenedor global único de DI.                                                                                                                                                                                                                 |
 | **Composition (orquestación)** | Los servicios de aplicación coordinan varias dependencias para ofrecer una API pública simple: `EmployeeService` compone `IEmployeeRepository` + `IBonusCalculator` (p. ej. `getAllWithBonus()`), y la ruta de departamentos compone a su vez `DepartmentService` y `EmployeeService` para el endpoint de departamentos con proyectos.                                                                                          |
 
+## Preguntas técnicas
+
+### Rendimiento en Node.js y TypeORM
+
+Node.js es de **I/O bound por diseño**: el event loop no bloquea las operaciones de red o de base de datos, así que el cuello de botella de una API como esta casi nunca es el runtime, sino el acceso a datos. Las claves de rendimiento aplicadas en este proyecto son:
+
+- **Pool de conexiones configurado explícitamente** (`src/infrastructure/database/data-source.ts`): `max: 10` conexiones simultáneas, `idleTimeoutMillis: 30_000` y `connectionTimeoutMillis: 5_000`. En lugar de crear una conexión por request (costosísimo en TLS/handshake de PostgreSQL), las conexiones se reutilizan.
+- **`synchronize: false`**: el esquema no se altera desde la aplicación; solo cambia vía migraciones versionadas (ver sección de migraciones). En producción, sync automático implica DDL no planificado y bloqueos de tabla.
+- **Índices explícitos en columnas de clave foránea** (ver sección _Índices_): aceleran los JOINs y las búsquedas por relación (p. ej. `employees.department_id`, `position_history.employee_id`).
+- **Paginación en servidor para listados**: `findAllPaginated` usa `skip`/`take` en lugar de devolver todos los registros.
+- **Transacciones acotadas**: operaciones que tocan varias tablas (`assignToProject`, `createPositionHistory`) corren en una única transacción con `manager.transaction(...)`, evitando round-trips adicionales y estados intermedios.
+
+Dónde mordería el rendimiento: cargar relaciones no usadas por respuesta (los `relations` de TypeORM generan JOINs), consultas sin índice en columnas usadas en `WHERE`, o paginación profunda con `skip` alto (OFFSET). Para este último caso la alternativa es **keyset pagination** (`WHERE id > :cursor ORDER BY id`), que evita descartar filas en el servidor.
+
+### Manejo de queries N+1
+
+**Qué es**: cuando una lista de N entidades dispara (de forma oculta) N+1 consultas adicionales — una por cada entidad para cargar su relación. Para un `GET /api/employees` con 100 empleados y su departamento, un acceso perezoso a `employee.department` por fila genera 101 queries en vez de 1.
+
+**Cómo se evita en este proyecto**:
+
+1. **Carga ansiosa acotada en el repositorio**: las consultas de lectura usan `relations` para resolver el grafo en un solo query. `findByIdWithPositionHistory` carga `positionHistory` con la misma consulta que el empleado, y `assignToProject` relee el empleado con `relations: ['department', 'projects', 'positionHistory']`.
+2. **QueryBuilder para grafos complejos**: `findByDepartmentWithProjects` (`src/infrastructure/database/repositories/employee.repository.ts`) resuelve `department` y `projects` en una sola consulta con `leftJoinAndSelect`, produciendo un único `SELECT` con JOINs.
+3. **Solo se carga lo que se va a usar**: el mapper `toEmployee` devuelve exactamente los campos del contrato de dominio; no se arrastran entidades completas a la capa de aplicación.
+
+Reglas para no reintroducir N+1: — nunca acceder a `entity.relacion` fuera de una consulta que la haya cargado (detona queries perezosas); — desconfiar de loops que acceden a propiedades de relación por fila; — si el grafo a cargar depende de filtros complejos, usar QueryBuilder en lugar de encadenar `relations`; — activar logs de queries en desarrollo (`logging`) para detectar consultas ocultas.
+
+### QueryBuilder vs find
+
+| Aspecto             | `find` (API declarativa)                                          | `createQueryBuilder` (QBuilder)                                    |
+| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Uso**             | CRUD sencillo: `findOne`, `find`, `findAndCount`                  | Consultas con filtros, orden y joins complejos                     |
+| **Modelo**          | Objeto de opciones (`where`, `relations`, `order`, `skip`/`take`) | SQL encadenado y tipado (`leftJoinAndSelect`, `where`, `andWhere`) |
+| **Control del SQL** | Bajo: TypeORM decide los JOINs                                    | Alto: se controlan alias, direcciones y filtros por tabla          |
+| **Reutilización**   | Sencilla para agrupaciones pequeñas y paginación simple           | Ideal para queries reutilizables y condiciones dinámicas           |
+| **Riesgo**          | Oculta la forma del query resultante                              | Exige conocer el modelo relacional                                 |
+
+**En este proyecto conviven ambos**, y la regla es elegir por complejidad:
+
+- `findById`, `findAllPaginated`, `create`, `update`, `delete` usan la API declarativa (`findOne`, `findAndCount`, `update`), que es suficiente y más legible.
+- `findByDepartmentWithProjects` usa `createQueryBuilder` porque necesita tres entidades a la vez y filtrar sobre la tabla de unión (`andWhere('project.id IS NOT NULL')`), algo que `relations` + `where` haría con más código y peor lectura.
+
+Recomendación práctica: empezar con `find`; migrar a QueryBuilder cuando la consulta necesite **joins múltiples, condiciones sobre tablas join, agrupaciones o paginación compleja**. No usar QueryBuilder donde `find` alcanza: se pierde legibilidad sin ganar nada.
+
+### Estrategias de caching con Redis
+
+**Estado actual**: este proyecto no integra Redis todavía — las consultas van directamente a PostgreSQL con el pool configurado. La estrategia siguiente es la recomendada para cuando el caché entre en juego, no algo ya implementado.
+
+**Patrón recomendado: cache-aside (lazy loading)**
+
+1. **Lectura**: comprobar Redis; en `hit`, devolver; en `miss`, leer la base, escribir en caché con TTL y devolver.
+2. **Escritura**: invalidar (o actualizar) la clave relacionada **dentro de la misma transacción** de negocio, para que el dato viejo no sobreviva en el caché tras un `update`/`delete` confirmado.
+3. **TTLs diferenciados**: corto para colecciones volátiles (listas de empleados, ~30-60s) y más largo para consultas estables; así el patrón "dirty read" acotado es aceptable y el caché no se vuelve una fuente de verdad divergente.
+
+**Qué cachear y cómo nombrarlo**
+
+- **Listados paginados y agregados costosos** (p. ej. `findByDepartmentWithProjects`, reportes): son los que más ganan con caché, porque repiten la misma consulta JOIN.
+- **Entidades individuales** por `id` (key `employees:{id}`) para lecturas calientes como el perfil de empleado.
+- **Estructura de clave con prefijo por recurso e ids compuestos** (`employees:dept:{departmentId}`, `projects:list:page:{page}:size:{pageSize}`) para poder invalidar de forma inteligente (por prefijo) en lugar de `FLUSHALL`.
+- El **caché vive en la capa de repositorio**, no en los servicios: el repositorio ya es el único punto de acceso a datos, así que el servicio (capa de aplicación) no sabe de la existencia de Redis.
+
+**Invalidación coherente con la Clean Architecture**: el contrato del repositorio (`IEmployeeRepository`) no cambia; se introduce un decorador/wrapper del repositorio (patrón **Decorator**) que consulta e invalida Redis y que implementa la misma interfaz, manteniendo el resto de la aplicación intacta y las reglas de dependencias con el caching en `infrastructure`.
+
+**Guía práctica de caches fragmentados como este**: eliminar la clave al escribir (invalidación) en lugar de intentar actualizarla, porque mantener consistencia de colecciones depende de muchas entradas; aislar a un solo tipo de dato por clave; vigilar el ratio de `miss` (si el TTL es demasiado corto, el costo de dockerizar el caché no se amortiza); y, para reportes agregados, cachear por ventanas de tiempo en lugar de invalidar por cada cambio de entidad.
+
 ### Equivalencias con la versión .NET original
 
 | Original (.NET)                     | Este proyecto (Node.js)                  |
