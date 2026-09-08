@@ -1,6 +1,7 @@
 # employee-management-api-node
 
-[![Build](https://img.shields.io/badge/build-unknown-lightgrey)](#)
+[![CI](https://github.com/antoniojvargas/employee-management-api-node/actions/workflows/ci.yml/badge.svg?)](https://github.com/antoniojvargas/employee-management-api-node/actions/workflows/ci.yml)
+[![Docker Build](https://github.com/antoniojvargas/employee-management-api-node/actions/workflows/docker-build.yml/badge.svg?)](https://github.com/antoniojvargas/employee-management-api-node/actions/workflows/docker-build.yml)
 [![Coverage](https://img.shields.io/badge/coverage-unknown-lightgrey)](#)
 
 Recreación en **Node.js/TypeScript** de una API de gestión de empleados.
