@@ -19,7 +19,79 @@ Construir una API para la administración de empleados aplicando los principios 
 - **Arquitectura:** Clean Architecture (domain / application / infrastructure)
 - **Testing:** Jest + Supertest
 
-## Configuración
+## Instalación y ejecución
+
+### Requisitos previos
+
+| Herramienta | Versión mínima           |
+| ----------- | ------------------------ |
+| Node.js     | 20 (Node 22 recomendado) |
+| npm         | 10                       |
+| Docker      | 24+ (con Compose v2)     |
+
+### Opción A — Docker Compose (recomendada)
+
+Levanta PostgreSQL y la API en un solo comando:
+
+```bash
+git clone https://github.com/antoniojvargas/employee-management-api-node.git
+cd employee-management-api-node
+cp .env.example .env   # ajusta los valores si es necesario
+docker compose up --build
+```
+
+La API queda en `http://localhost:8080` y PostgreSQL en `localhost:5432`. La documentación interactiva (Swagger UI) está disponible en `http://localhost:8080/docs`.
+
+### Opción B — Desarrollo local (Node + npm)
+
+```bash
+git clone https://github.com/antoniojvargas/employee-management-api-node.git
+cd employee-management-api-node
+cp .env.example .env
+npm ci                 # instalación reproducible con package-lock.json
+```
+
+Con una instancia de PostgreSQL corriendo, aplica las migraciones y levanta el servidor:
+
+```bash
+npm run build
+npm run migration:run
+npm run dev            # tsx watch (hot-reload)
+```
+
+La API queda en `http://localhost:3000` (o el puerto definido en `PORT`).
+
+### Ejecutar migraciones
+
+```bash
+npm run migration:run      # aplicar migraciones pendientes
+npm run migration:revert   # revertir la última
+npm run migration:show     # listar estado
+```
+
+### Ejecutar tests
+
+Los tests de integración necesitan una base PostgreSQL aislada (puerto 5433), definida en `docker-compose.test.yml`:
+
+```bash
+docker compose -f docker-compose.test.yml up -d   # o: make test-db
+npm test                                          # o: make test
+npm run lint                                      # eslint
+```
+
+### Atajos con Make
+
+| Comando          | Descripción                                     |
+| ---------------- | ----------------------------------------------- |
+| `make up`        | `docker compose up -d --build` (api + db)       |
+| `make down`      | `docker compose down`                           |
+| `make logs`      | `docker compose logs -f api`                    |
+| `make test`      | `npm test`                                      |
+| `make test-db`   | Levanta la base de datos de tests (puerto 5433) |
+| `make test-down` | Detiene la base de datos de tests               |
+| `make migrate`   | Ejecuta migraciones pendientes                  |
+
+## Configuración de variables de entorno
 
 Las variables de entorno del proyecto están documentadas en `.env.example`. Para trabajar en local, cópialo a `.env` y ajusta los valores:
 
@@ -50,7 +122,7 @@ El archivo `.env` está ignorado por git: nunca lo commitees con valores reales.
 Levanta la API y PostgreSQL con un solo comando:
 
 ```bash
-docker compose up --build
+docker compose up --build     # o: make up
 ```
 
 ### Servicios y puertos
@@ -60,7 +132,7 @@ docker compose up --build
 | `api`    | `8080`          | API Fastify (HTTP)     |
 | `db`     | `5432`          | PostgreSQL 16 (Alpine) |
 
-### Credenciales de la base de datos (seed)
+### Credenciales de la base de datos (entorno Docker)
 
 | Campo    | Valor                 |
 | -------- | --------------------- |
@@ -69,16 +141,6 @@ docker compose up --build
 | Usuario  | `employee`            |
 | Password | `employee`            |
 | DB       | `employee_management` |
-
-### Atajos con Make
-
-```bash
-make up        # docker compose up -d --build
-make down      # docker compose down
-make logs      # docker compose logs -f api
-make test      # npm test
-make migrate   # npm run migration:run
-```
 
 ### Hot-reload en desarrollo
 
@@ -1093,4 +1155,13 @@ Recomendación práctica: empezar con `find`; migrar a QueryBuilder cuando la co
 
 ## Estado del proyecto
 
-🚧 En construcción — diseño de dominio y persistencia con entidades de empleados, departamentos, proyectos e historial de posiciones ya modeladas, junto con el subsistema de autenticación y autorización (registro, login y control de acceso por roles con JWT Bearer) y el cálculo de bonificaciones por tipo de posición (patrón Strategy + Factory con inyección de dependencias).
+**v1.0.0 estable** — API completa de gestión de empleados con:
+
+- **Autenticación y autorización** JWT con roles (registro, login y control de acceso por `Admin`/`User`)
+- **CRUD completo** de empleados, departamentos y proyectos, con historial de posiciones y asignación a proyectos
+- **Cálculo de bonificaciones** por tipo de posición (patrón Strategy + Factory con inyección de dependencias)
+- **Clean Architecture** en Node.js/TypeScript: Fastify + TypeORM + PostgreSQL, con migraciones versionadas
+- **API documentada** con Swagger UI y colección de Postman (`postman/`)
+- **330 tests** (Jest + Supertest) y CI en GitHub Actions (lint, build, migraciones y tests)
+
+Los cambios notables se documentan en [CHANGELOG.md](./CHANGELOG.md).
